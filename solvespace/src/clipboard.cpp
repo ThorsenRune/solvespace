@@ -336,7 +336,7 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
 			if (!SS.copyConstraints) continue;	
 			ConstrainSameSomething(c);
 		}
-		if (c->type == Constraint::EQUAL_LENGTH_LINES) {   //eMVe6. Dangerous. Can make solvespace unresponsive.
+		if (c->type == Constraint::EQUAL_LENGTH_LINES) {   //	6. Dangerous. Can make solvespace unresponsive.
 			if (!SS.copyConstraints) continue;
 			ConstrainSameSomething(c);
 		}

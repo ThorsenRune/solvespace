@@ -466,6 +466,7 @@ void RTTest(int Param){	//RT2014 Prototyping new code
 		}
 	}
 	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
+		Request *r = &(SK.request.elem[i]);		//Move old elements in destinations to a swap group
 		if (r->group.v == srcGrp)				// Move source to destination
 		{
 			r->group.v = dstGrp;
