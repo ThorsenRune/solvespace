@@ -167,7 +167,7 @@ void SolveSpace::GenerateAll(void) {
 
 void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
     int i, j;
-
+	int64_t timeOut = GetMilliseconds() + 5000;
     // Remove any requests or constraints that refer to a nonexistent
     // group; can check those immediately, since we know what the list
     // of groups should be.
@@ -176,13 +176,14 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
 
     // Don't lose our numerical guesses when we regenerate.
     IdList<Param,hParam> prev;
-    SK.param.MoveSelfInto(&prev);
+    SK.param.MoveSelfInto(&prev);		//Move the old param list into the list called prev
     SK.entity.Clear();
 
     int64_t inTime = GetMilliseconds();
 
     bool displayedStatusMessage = false;
     for(i = 0; i < SK.group.n; i++) {
+
         Group *g = &(SK.group.elem[i]);
 
         int64_t now = GetMilliseconds();
@@ -233,7 +234,7 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
         for(j = 0; j < SK.request.n; j++) {
             Request *r = &(SK.request.elem[j]);
             if(r->group.v != g->h.v) continue;
-
+			// There is a request for an entity in the group (outer loop)
             r->Generate(&(SK.entity), &(SK.param));
         }
         g->Generate(&(SK.entity), &(SK.param));
@@ -466,7 +467,7 @@ void SolveSpace::SolveGroup(hGroup hg, bool andFindFree) {
     MarkDraggedParams();
     g->solved.remove.Clear();
     int how = sys.Solve(g, &(g->solved.dof),
-                           &(g->solved.remove), true, andFindFree);
+		&(g->solved.remove), (solveOptions&&0x1), andFindFree);
     if((how != System::SOLVED_OKAY) ||
        (how == System::SOLVED_OKAY && g->solved.how != System::SOLVED_OKAY))
     {

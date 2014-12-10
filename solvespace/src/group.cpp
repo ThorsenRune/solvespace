@@ -47,7 +47,8 @@ void Group::AddParam(IdList<Param,hParam> *param, hParam hp, double v) {
 
 bool Group::IsVisible(void) {
     if(!visible) return false;
-    if(SS.GroupsInOrder(SS.GW.activeGroup, h)) return false;
+    if(SS.GroupsInOrder(SS.GW.activeGroup, h)) 
+		return false;
     return true;
 }
 
@@ -571,6 +572,7 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
 }
 
 void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
+	//RT These lines are not requests (?) so a GetRequest0 will return null
     Entity *ep = SK.GetEntity(in);
 
     Entity en;

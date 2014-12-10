@@ -231,7 +231,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) {
 
     // The number of unknowns to solve for.
     int n   = periodic ? 3 + ep : ep;
-    if(n >= MAX_N) oops();
+    if(n >= MAX_N) ERRMSG_RT();
     // The number of on-curve points, one more than the number of segments.
     int pts = periodic ? 4 + ep : 2 + ep;
 
@@ -632,7 +632,7 @@ void Entity::DrawOrGetDistance(void) {
             break;
 
         default:
-            oops();
+            ERRMSG_RT();
     }
 
     // And draw the curves; generate the rational polynomial curves for

@@ -66,7 +66,7 @@ void TextWindow::ScreenShowGroupsSpecial(int link, uint32_t v) {
         }
     }
 }
-void TextWindow::ScreenActivateGroup(int link, uint32_t v) {
+void TextWindow::ScreenActivateGroup(int link, uint32_t v) {	//RT2014 Activate the group that the user clicked upon
     hGroup hg = { v };
     Group *g = SK.GetGroup(hg);
     g->visible = true;
@@ -101,8 +101,7 @@ void TextWindow::ShowListOfGroups(void) {
          radioFalse[] = { ' ', (char)RADIO_FALSE, ' ', 0 },
          checkTrue[]  = { ' ', (char)CHECK_TRUE,  ' ', 0 },
          checkFalse[] = { ' ', (char)CHECK_FALSE, ' ', 0 };
-
-    Printf(true, "%Ft active");
+	Printf(true, "%Ft active");
     Printf(false, "%Ft    shown ok  group-name%E");
     int i;
     bool afterActive = false;
@@ -136,7 +135,17 @@ void TextWindow::ShowListOfGroups(void) {
             g->h.v, (&TextWindow::ScreenSelectGroup), s);
 
         if(active) afterActive = true;
+		if (SS.revisionUnlockKey && 1) afterActive = false;	//RT I like to see all group states
     }
+	//RT START
+	if (SS.revisionUnlockKey && 1){
+		if (SS.GW.activeGroup.v){
+			Group *g = SK.group.FindByIdNoOops(SS.GW.activeGroup);
+			if (g)
+				Printf(true, "%Ft active (%d DOF)", g->solved.dof);
+		}
+	}
+	//RT END
 
     Printf(true,  "  %Fl%Ls%fshow all%E / %Fl%Lh%fhide all%E",
         &(TextWindow::ScreenShowGroupsSpecial),
@@ -256,17 +265,116 @@ void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
     SS.UndoRemember();
 
     hGroup hg = SS.TW.shown.group;
-    if(hg.v == SS.GW.activeGroup.v) {
-        Error("This group is currently active; activate a different group "
-              "before proceeding.");
-        return;
-    }
+
+	if (SS.revisionUnlockKey && 0x1) {
+		/*	RT2014: disable the annoying condition for deleting active group. 
+		It makes more sense to actually require the group to be active before deleting
+		therefore the logic of the following statement could be inverted			*/
+		/*However its just annoying, so just let the user delete the group
+		if (hg.v != SS.GW.activeGroup.v) {									//RT2014	Now you can only delete the currently active group
+			Error("Please activate the group before deleting.");
+			return;
+		}
+		*/
+	}
+	else {		//Original condition to disable deleting of active group
+		if (hg.v == SS.GW.activeGroup.v) {
+			Error("This group is currently active; activate a different group "
+				"before proceeding.");
+			return;
+		}
+	}
     SK.group.RemoveById(SS.TW.shown.group);
     // This is a major change, so let's re-solve everything.
     SS.TW.ClearSuper();
     SS.GW.ClearSuper();
     SS.GenerateAll(0, INT_MAX);
 }
+
+//RT***************************************New routines to move to adequate locations*****************************************
+int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT2014 Supplementary description of constraints
+	//Overwrite the description with named descriptions. The psNewString is the return value to call as  &oldString
+//	static char ret[1024];		//RT Static because we return this string (?!)
+	if (c->type == Constraint::EQUAL_LENGTH_LINES){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		Request *reqB = SK.GetRequest(c->entityB.request());
+ 		sprintf(*psNewString, "%s == %s", reqA->str.str, reqB->str.str);
+		return 1;
+	}
+	else if ((Constraint::PT_PT_DISTANCE) == c->type){
+		try{
+			Request *reqA = SK.GetRequest(c->ptA.request());
+			Request *reqB = SK.GetRequest(c->ptB.request());
+			Vector p0 = SK.GetEntity(c->ptA)->PointGetNum();
+			Vector p1 = SK.GetEntity(c->ptB)->PointGetNum();
+			sprintf(*psNewString, "%s == %s", reqA->str.str, SS.MmToString((p1.Minus(p0).Magnitude())));
+			return 1;
+		}
+		catch (int e)
+		{
+			return -1;	//Error has occoured
+		}
+	}
+	else if ((Constraint::ANGLE) == c->type){
+		try{
+			Request *reqA = SK.GetRequest(c->entityA.request());
+			Request *reqB = SK.GetRequest(c->entityB.request());
+			Vector v0 = SK.GetEntity(c->entityA)->VectorGetNum();
+			Vector v1 = SK.GetEntity(c->entityB)->VectorGetNum();
+			v0 = v0.WithMagnitude(1);
+			v1 = v1.WithMagnitude(1);
+			double theta = acos(v0.Dot(v1));
+			sprintf(*psNewString, "ang(%s, %s) = %.2f deg", reqA->str.str, reqB->str.str, theta * 180 / PI);
+			return 1;
+		}
+		catch (int e)
+		{
+			return -1;	//Error has occoured
+		}	}
+	else if ((Constraint::EQUAL_RADIUS) == c->type){
+		try{
+			Request *reqA = SK.GetRequest(c->entityA.request());
+			Request *reqB = SK.GetRequest(c->entityB.request());
+			sprintf(*psNewString, "(/)%s == (/)%s", reqA->str.str, reqB->str.str);
+			return 1;
+		}
+		catch (int e)
+		{
+			return -1;	//Error has occoured
+		}
+	}
+	else if ((Constraint::EQUAL_LINE_ARC_LEN) == c->type){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		Request *reqB = SK.GetRequest(c->entityB.request());
+		if (Request::ARC_OF_CIRCLE == reqB->type){
+			sprintf(*psNewString, "%s == (arc)%s", reqA->str.str, reqB->str.str);
+		}
+		else
+			sprintf(*psNewString, "(arc)%s == %s", reqA->str.str, reqB->str.str);
+		return 1;
+	}
+	else if ((Constraint::PT_ON_LINE) == c->type){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		sprintf(*psNewString, "pt X %s", reqA->str.str );
+	}
+	else if ((Constraint::PT_ON_CIRCLE) == c->type){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		sprintf(*psNewString, "pt X %s", reqA->str.str );
+	}	
+ 	else if ((Constraint::HORIZONTAL) == c->type){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		sprintf(*psNewString, "%s Horiz ", reqA->str.str);
+	}	
+	else if ((Constraint::VERTICAL) == c->type){
+		Request *reqA = SK.GetRequest(c->entityA.request());
+		sprintf(*psNewString, "%s VERT", reqA->str.str);
+	}
+	else if ((Constraint::POINTS_COINCIDENT) == c->type) return 1;
+	else if ((Constraint::COMMENT) == c->type) return 1;
+return 0;				//No change
+}
+//RT*****************************   END OF New code *******************************
+
 void TextWindow::ShowGroupInfo(void) {
     Group *g = SK.group.FindById(shown.group);
     const char *s = "???";
@@ -417,6 +525,13 @@ list_items:
 
         if(r->group.v == shown.group.v) {
             char *s = r->DescriptionString();
+			if (*r->str.str != '\0')				//RT: No name, do nothing
+			{
+				if (r->construction)			//RT: Overwrite some descriptions with named 
+					sprintf(s, "%s  (Ref)", r->str.str);
+				else
+					sprintf(s, "%s", r->str.str);
+			}
             Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
                 (a & 1) ? 'd' : 'a',
                 r->h.v, (&TextWindow::ScreenSelectRequest),
@@ -431,9 +546,9 @@ list_items:
     Printf(false, "%Ft constraints in group (%d DOF)", g->solved.dof);
     for(i = 0; i < SK.constraint.n; i++) {
         Constraint *c = &(SK.constraint.elem[i]);
-
         if(c->group.v == shown.group.v) {
             char *s = c->DescriptionString();
+			if (SS.revisionUnlockKey && 0x1)	txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
             Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E %s",
                 (a & 1) ? 'd' : 'a',
                 c->h.v, (&TextWindow::ScreenSelectConstraint),
@@ -444,6 +559,8 @@ list_items:
     }
     if(a == 0) Printf(false, "%Ba   (none)");
 }
+
+
 
 //-----------------------------------------------------------------------------
 // The screen that's displayed when the sketch fails to solve. A report of
@@ -480,12 +597,13 @@ void TextWindow::ShowGroupSolveInfo(void) {
         hConstraint hc = g->solved.remove.elem[i];
         Constraint *c = SK.constraint.FindByIdNoOops(hc);
         if(!c) continue;
-
+		char *s = c->DescriptionString();
+		if (SS.revisionUnlockKey && 0x1) TextWindow::txtConstraintNamesGet(c, &s); //RT Provide additional info about constraints
         Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
             (i & 1) ? 'd' : 'a',
             c->h.v, (&TextWindow::ScreenSelectConstraint),
             (&TextWindow::ScreenHoverConstraint),
-            c->DescriptionString());
+            s);
     }
 
     Printf(true,  "It may be possible to fix the problem ");

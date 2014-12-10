@@ -693,7 +693,8 @@ nogrid:;
     }
 
     // Draw the active group; this does stuff like the mesh and edges.
-    (SK.GetGroup(activeGroup))->Draw();
+	Group *g1 = (SK.GetGroup(activeGroup));
+    g1->Draw();
 
     // Now draw the entities
     if(showHdnLines) glDisable(GL_DEPTH_TEST);

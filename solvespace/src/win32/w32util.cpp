@@ -17,8 +17,17 @@ void dbp(const char *str, ...)
     va_start(f, str);
     _vsnprintf(buf, sizeof(buf), str, f);
     va_end(f);
-
     OutputDebugString(buf);
+}
+void dbp_RT(const char *str, ...)			//RT A version with messagebox for the user
+{
+    va_list f;
+    static char buf[1024*50];
+    va_start(f, str);
+    _vsnprintf(buf, sizeof(buf), str, f);
+    va_end(f);
+	Error(buf);	//RT debug message on screen before closing app
+	OutputDebugString(buf);
 }
 
 void GetAbsoluteFilename(char *file)
@@ -37,7 +46,7 @@ void GetAbsoluteFilename(char *file)
 void *AllocTemporary(size_t n)
 {
     void *v = HeapAlloc(TempHeap, HEAP_NO_SERIALIZE | HEAP_ZERO_MEMORY, n);
-    if(!v) oops();
+    if(!v) ERRMSG_RT();
     return v;
 }
 void FreeTemporary(void *p) {
@@ -58,12 +67,12 @@ void *MemRealloc(void *p, size_t n) {
     }
 
     p = HeapReAlloc(PermHeap, HEAP_NO_SERIALIZE | HEAP_ZERO_MEMORY, p, n);
-    if(!p) oops();
+    if(!p) ERRMSG_RT();
     return p;
 }
 void *MemAlloc(size_t n) {
     void *p = HeapAlloc(PermHeap, HEAP_NO_SERIALIZE | HEAP_ZERO_MEMORY, n);
-    if(!p) oops();
+    if(!p) ERRMSG_RT();
     return p;
 }
 void MemFree(void *p) {
@@ -71,8 +80,8 @@ void MemFree(void *p) {
 }
 
 void vl(void) {
-    if(!HeapValidate(TempHeap, HEAP_NO_SERIALIZE, NULL)) oops();
-    if(!HeapValidate(PermHeap, HEAP_NO_SERIALIZE, NULL)) oops();
+    if(!HeapValidate(TempHeap, HEAP_NO_SERIALIZE, NULL)) ERRMSG_RT();
+    if(!HeapValidate(PermHeap, HEAP_NO_SERIALIZE, NULL)) ERRMSG_RT();
 }
 
 void InitHeaps(void) {

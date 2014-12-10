@@ -206,7 +206,7 @@ public:
     }
 
     void RemoveLast(int cnt) {
-        if(n < cnt) oops();
+        if(n < cnt) ERRMSG_RT();
         n -= cnt;
         // and elemsAllocated is untouched, same as in RemoveTagged
     }
@@ -226,7 +226,7 @@ template <class T, class H>
 class IdList {
 public:
     T     *elem;
-    int   n;
+    int   n;					//RT:Number of elements in list
     int   elemsAllocated;
 
     uint32_t MaximumId(void) {
@@ -263,7 +263,7 @@ public:
                 first = mid + 1;
             } else {
                 dbp("can't insert in list; is handle %d not unique?", t->h.v);
-                oops();
+                ERRMSG_RT();
             }
         }
         int i = first;
@@ -272,17 +272,31 @@ public:
         elem[i] = *t;
         n++;
     }
-
+	void SwapR(T& a, T& b){
+		T c(a); a = b; b = c;
+	}
     T *FindById(H h) {
         T *t = FindByIdNoOops(h);
-        if(!t) {
-            dbp("failed to look up item %08x, searched %d items", h.v, n);
-            oops();
+		if (t) return t;
+		/*
+		for (int i = 0; i < n  ; i++) {
+			if (elem[i].h.v>elem[i + 1].h.v){
+				SwapR(elem[i] , elem[i + 1]);
+				if (elem[i].h.v == h.v)		
+					return &(elem[i]);
+			}
         }
+
+		t = FindByIdNoOops(h);
+		*/
+		if (!t) {
+//            dbp("failed to look up item %08x, searched %d items", h.v, n);
+			Error("failed to look up item %08x, searched %d items", h.v, n);	//RT debug message on screen before closing app
+			}
         return t;
     }
 
-    T *FindByIdNoOops(H h) {
+    T *FindByIdNoOops(H h) {		// Lookup h in this list and return its element
         int first = 0, last = n-1;
         while(first <= last) {
             int mid = (first + last)/2;
@@ -345,8 +359,8 @@ public:
         RemoveTagged();
     }
 
-    void MoveSelfInto(IdList<T,H> *l) {
-        memcpy(l, this, sizeof(*this));
+    void MoveSelfInto(IdList<T,H> *l) {			
+			(l, this, sizeof(*this));		// copy 'this' into 'l'
         elemsAllocated = n = 0;
         elem = NULL;
     }
@@ -369,14 +383,15 @@ public:
 
 };
 
+static int newUID = 0;			//RT numbers for unique textstrings		
 class NameStr {
 public:
-    char str[64];
-
-    inline void strcpy(const char *in) {
-        memcpy(str, in, min(strlen(in)+1, sizeof(str)));
+	char str[64];
+    inline void strcpy(const char *in) { // Make a local copy of in string
+        memcpy(str, in, min(strlen(in)+1, sizeof(str)));	
         str[sizeof(str)-1] = '\0';
     }
+
 };
 
 class BandedMatrix {

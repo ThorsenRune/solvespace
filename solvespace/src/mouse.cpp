@@ -802,9 +802,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             hr = AddRequest(Request::LINE_SEGMENT);
             SK.GetEntity(hr.entity(1))->PointForceTo(v);
             ConstrainPointByHovered(hr.entity(1));
-
             ClearSuper();
-
             pending.operation = DRAGGING_NEW_LINE_POINT;
             pending.point = hr.entity(2);
             pending.description = "click next point of line, or press Esc";
@@ -1093,7 +1091,7 @@ void GraphicsWindow::MouseLeftUp(double mx, double my) {
             // hack.
             if(hover.IsEmpty() && 
                 (contextMenuCancelTime == 0 ||
-                 (GetMilliseconds() - contextMenuCancelTime) > 200))
+                  (GetMilliseconds() - contextMenuCancelTime) > 200))
             {
                 ClearSelection();
             }

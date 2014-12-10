@@ -103,9 +103,10 @@ void Request::Generate(IdList<Entity,hEntity> *entity,
     e.style = style;
     e.workplane = workplane;
     e.construction = construction;
-    e.str.strcpy(str.str);
+	e.str.strcpy(str.str); 
+
     e.font.strcpy(font.str);
-    e.h = h.entity(0);
+    e.h = h.entity(0);				//Get the handle ID 
 
     // And generate entities for the points
     for(i = 0; i < points; i++) {

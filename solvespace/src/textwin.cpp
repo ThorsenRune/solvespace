@@ -114,7 +114,9 @@ void TextWindow::ClearScreen(void) {
     rows = 0;
 }
 
+//RT Please explain how to use this:
 void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
+	//RT %d=integer (no %i)
     va_list vl;
     va_start(vl, fmt);
 
@@ -130,8 +132,8 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
         meta[r][c].link = NOT_A_LINK;
     }
 
-    char fg = 'd';
-    char bg = 'd';
+	char fg = 'd';	//Foreground color
+    char bg = 'd';	//Background color
     RgbColor bgRgb = NULL_COLOR;
     int link = NOT_A_LINK;
     uint32_t data = 0;
@@ -236,7 +238,8 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                     h = va_arg(vl, LinkFunction *);
                     break;
 
-                case 'D': {
+                case 'D': {				//%f%D will give a change data link
+										// as used in Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[change]%E",e->str.str, &ScreenEditTtfText, e->h.request());
                     unsigned int v = va_arg(vl, unsigned int);
                     data = (uint32_t)v;
                     break;

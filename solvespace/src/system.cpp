@@ -450,8 +450,8 @@ int System::Solve(Group *g, int *dof, List<hConstraint> *bad,
     EvalJacobian();
 
     int rank; rank = CalculateRank();
-    if(rank != mat.m) {
-        if(andFindBad) {
+    if(rank != mat.m) {				//RT This may be a CPU killer
+        if(andFindBad) {			//Now this is an option
             FindWhichToRemoveToFixJacobian(g, bad);
         }
         return System::SINGULAR_JACOBIAN;

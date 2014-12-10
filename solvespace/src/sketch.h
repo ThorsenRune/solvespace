@@ -26,7 +26,7 @@ class Equation;
 class hGroup {
 public:
     // bits 15: 0   -- group index
-    uint32_t v;
+    uint32_t v;											//RT2014: The unique group identifier shown in the command window
 
     inline hEntity entity(int i);
     inline hParam param(int i);
@@ -107,7 +107,7 @@ public:
 
     hGroup      opA;
     hGroup      opB;
-    bool        visible;
+    bool        visible;		//RT Are the object in the group visible
     bool        suppress;
     bool        relaxConstraints;
     bool        allDimsReference;

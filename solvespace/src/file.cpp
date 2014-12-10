@@ -45,7 +45,7 @@ hGroup SolveSpace::CreateDefaultDrawingGroup(void) {
     g.predef.q = Quaternion::From(1, 0, 0, 0);
     hRequest hr = Request::HREQUEST_REFERENCE_XY;
     g.predef.origin = hr.entity(1);
-    g.name.strcpy("sketch-in-plane");
+    g.name.strcpy("Default sketch");  //RT Default sketch
     SK.group.AddAndAssignId(&g);
     SK.GetGroup(g.h)->activeWorkplane = g.h.entity(0);
     return g.h;
@@ -240,14 +240,14 @@ void SolveSpace::SaveUsingTable(int type) {
                 fprintf(fh, "{\n");
                 for(j = 0; j < p->M.n; j++) {
                     EntityMap *em = &(p->M.elem[j]);
-                    fprintf(fh, "    %d %08x %d\n", 
+                    fprintf(fh, "    %d %08x %d\n",
                             em->h.v, em->input.v, em->copyNumber);
                 }
                 fprintf(fh, "}");
                 break;
             }
 
-            default: oops();
+            default: ERRMSG_RT();
         }
         fprintf(fh, "\n");
     }
@@ -259,7 +259,7 @@ bool SolveSpace::SaveToFile(char *filename) {
     SS.GenerateAll(0, INT_MAX);
 
     fh = fopen(filename, "wb");
-    if(!fh) {   
+    if(!fh) {
         Error("Couldn't write to file '%s'", filename);
         return false;
     }
@@ -329,7 +329,7 @@ bool SolveSpace::SaveToFile(char *filename) {
                     i, j, CO(srf->ctrl[i][j]), srf->weight[i][j]);
             }
         }
-        
+
         STrimBy *stb;
         for(stb = srf->trim.First(); stb; stb = srf->trim.NextAfter(stb)) {
             fprintf(fh, "TrimBy %08x %d %.20f %.20f %.20f  %.20f %.20f %.20f\n",
@@ -410,7 +410,7 @@ void SolveSpace::LoadUsingTable(char *key, char *val) {
                     break;
                 }
 
-                default: oops();
+                default: ERRMSG_RT();
             }
             break;
         }
@@ -425,7 +425,7 @@ bool SolveSpace::LoadFromFile(char *filename) {
     fileLoadError = false;
 
     fh = fopen(filename, "rb");
-    if(!fh) {   
+    if(!fh) {
         Error("Couldn't read from file '%s'", filename);
         return false;
     }
@@ -445,7 +445,7 @@ bool SolveSpace::LoadFromFile(char *filename) {
         if(s) *s = '\0';
 
         if(*line == '\0') continue;
-       
+
         char *e = strchr(line, '=');
         if(e) {
             *e = '\0';
@@ -527,7 +527,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
         if(s) *s = '\0';
 
         if(*line == '\0') continue;
-       
+
         char *e = strchr(line, '=');
         if(e) {
             *e = '\0';
@@ -556,11 +556,11 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
             if(sscanf(line, "Triangle %x %x  "
                              "%lf %lf %lf  %lf %lf %lf  %lf %lf %lf",
                 &(tr.meta.face), &rgb,
-                &(tr.a.x), &(tr.a.y), &(tr.a.z), 
-                &(tr.b.x), &(tr.b.y), &(tr.b.z), 
+                &(tr.a.x), &(tr.a.y), &(tr.a.z),
+                &(tr.b.x), &(tr.b.y), &(tr.b.z),
                 &(tr.c.x), &(tr.c.y), &(tr.c.z)) != 11)
             {
-                oops();
+                ERRMSG_RT();
             }
             tr.meta.color = RgbColor::FromPackedInt((uint32_t)rgb);
             m->AddTriangle(&tr);
@@ -570,7 +570,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
                 &(srf.h.v), &rgb, &(srf.face),
                 &(srf.degm), &(srf.degn)) != 5)
             {
-                oops();
+                ERRMSG_RT();
             }
             srf.color = RgbColor::FromPackedInt((uint32_t)rgb);
         } else if(StrStartsWith(line, "SCtrl ")) {
@@ -580,7 +580,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
             if(sscanf(line, "SCtrl %d %d %lf %lf %lf Weight %lf",
                                 &i, &j, &(c.x), &(c.y), &(c.z), &w) != 6)
             {
-                oops();
+                ERRMSG_RT();
             }
             srf.ctrl[i][j] = c;
             srf.weight[i][j] = w;
@@ -593,7 +593,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
                 &(stb.start.x), &(stb.start.y), &(stb.start.z),
                 &(stb.finish.x), &(stb.finish.y), &(stb.finish.z)) != 8)
             {
-                oops();
+                ERRMSG_RT();
             }
             stb.backwards = (backwards != 0);
             srf.trim.Add(&stb);
@@ -608,7 +608,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
                 &(crv.exact.deg),
                 &(crv.surfA.v), &(crv.surfB.v)) != 5)
             {
-                oops();
+                ERRMSG_RT();
             }
             crv.isExact = (isExact != 0);
         } else if(StrStartsWith(line, "CCtrl ")) {
@@ -618,7 +618,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
             if(sscanf(line, "CCtrl %d %lf %lf %lf Weight %lf",
                                 &i, &(c.x), &(c.y), &(c.z), &w) != 5)
             {
-                oops();
+                ERRMSG_RT();
             }
             crv.exact.ctrl[i] = c;
             crv.exact.weight[i] = w;
@@ -629,7 +629,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
                 &vertex,
                 &(scpt.p.x), &(scpt.p.y), &(scpt.p.z)) != 4)
             {
-                oops();
+                ERRMSG_RT();
             }
             scpt.vertex = (vertex != 0);
             crv.pts.Add(&scpt);
@@ -637,7 +637,7 @@ bool SolveSpace::LoadEntitiesFromFile(char *file, EntityList *le,
             sh->curve.Add(&crv);
             ZERO(&crv);
         } else {
-            oops();
+            ERRMSG_RT();
         }
     }
 

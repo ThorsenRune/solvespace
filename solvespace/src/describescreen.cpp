@@ -15,9 +15,11 @@ void TextWindow::ScreenEditTtfText(int link, uint32_t v) {
     Request *r = SK.GetRequest(hr);
 
     SS.TW.ShowEditControl(13, 10, r->str.str);
-    SS.TW.edit.meaning = EDIT_TTF_TEXT;
+
+	SS.TW.edit.meaning = EDIT_TTF_TEXT;
     SS.TW.edit.request = hr;
 }
+
 
 #define gs (SS.GW.gs)
 void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
@@ -40,9 +42,41 @@ void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
     SS.later.generateAll = true;
     SS.later.showTW = true;
 }
+//RT START PROTOTYPE CODE
+void TextWindow::txtEntityDescription_RT(Entity * e){
+	// This adds an edit name link to the elements
+	if (!(e->h.isFromRequest())) return;	//Only process drawing elements
+	if (e->type == Entity::LINE_SEGMENT){
+		//RT Let user edit the segment name
+		Request *rLn1 = SK.GetRequest0(e->h.request());
+		if (!rLn1) ERRMSG_RT();
+		if (*rLn1->str.str == '\0') {		//RT Make sure that line has a name
+			sprintf(rLn1->str.str, "L%d", rLn1->h.v);	//RT Use handle number as identifier
+		}
+		Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+			rLn1->str.str, &TextWindow::ScreenEditTtfText, e->h.request());
+	}
+	else if (e->type == Entity::LINE_SEGMENT){
+		Request *rLn1 = SK.GetRequest(e->h.request());
+		if (*rLn1->str.str == '\0') {		//RT Make sure that line has a name
+			sprintf(rLn1->str.str, "C%d", rLn1->h.v);	//RT Use handle number as identifier
+		}
+		TextWindow::Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+			rLn1->str.str, &TextWindow::ScreenEditTtfText, e->h.request());
+	}
+	else if (e->type == Entity::ARC_OF_CIRCLE){
+			Request *rLn1 = SK.GetRequest(e->h.request());
+			if (*rLn1->str.str == '\0') {		//RT Make sure that line has a name
+				sprintf(rLn1->str.str, "A%d", rLn1->h.v);	//RT Use handle number as identifier
+			}
+			TextWindow::Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+				rLn1->str.str, &TextWindow::ScreenEditTtfText, e->h.request());
+	}
+}
+//RT  ************************END of prototyping code*************************************************
 
 void TextWindow::DescribeSelection(void) {
-    Entity *e;
+    Entity *e=NULL;
     Vector p;
     int i;
     Printf(false, "");
@@ -89,10 +123,13 @@ void TextWindow::DescribeSelection(void) {
                 Printf(true, "   normal = " PT_AS_NUM, CO(p));
                 break;
             }
-            case Entity::LINE_SEGMENT: {
-                Vector p0 = SK.GetEntity(e->point[0])->PointGetNum();
-                p = p0;
-                Printf(false, "%FtLINE SEGMENT%E");
+			// Entity e == SK.GetEntity selection
+			case Entity::LINE_SEGMENT: {		//RT e->type==LINE_SEGMENT
+				Vector p0 = SK.GetEntity(e->point[0])->PointGetNum();
+				p = p0;
+				Printf(false, "%FtLINE SEGMENT%E");
+				if (SS.revisionUnlockKey && 0x1)
+					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 Printf(true,  "   thru " PT_AS_STR, COSTR(p));
                 Vector p1 = SK.GetEntity(e->point[1])->PointGetNum();
                 p = p1;
@@ -122,6 +159,8 @@ void TextWindow::DescribeSelection(void) {
 
             case Entity::ARC_OF_CIRCLE: {
                 Printf(false, "%FtARC OF A CIRCLE%E");
+				if (SS.revisionUnlockKey && 0x1)
+					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
                 p = SK.GetEntity(e->point[1])->PointGetNum();
@@ -138,6 +177,8 @@ void TextWindow::DescribeSelection(void) {
             }
             case Entity::CIRCLE: {
                 Printf(false, "%FtCIRCLE%E");
+				if (SS.revisionUnlockKey && 0x1)
+					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
                 double r = e->CircleGetRadiusNum();
@@ -249,17 +290,28 @@ void TextWindow::DescribeSelection(void) {
         Printf(true,  "     point " PT_AS_STR, COSTR(pp));
         Printf(true,  " pt-ln distance = %Fi%s%E",
             SS.MmToString(pp.DistanceToLine(lp0, lp1.Minus(lp0))));
-    } else if(gs.n == 2 && gs.vectors == 2) {
-        Printf(false, "%FtTWO VECTORS");
+	}
+	else if (gs.n == 2 && gs.vectors == 2) {
+		Printf(false, "%FtTWO VECTORS");
 
-        Vector v0 = SK.GetEntity(gs.entity[0])->VectorGetNum(),
-               v1 = SK.GetEntity(gs.entity[1])->VectorGetNum();
-        v0 = v0.WithMagnitude(1);
-        v1 = v1.WithMagnitude(1);
-
-        Printf(true,  "  vectorA = " PT_AS_NUM, CO(v0));
-        Printf(false, "  vectorB = " PT_AS_NUM, CO(v1));
-
+		Vector v0 = SK.GetEntity(gs.entity[0])->VectorGetNum();
+		Vector v1 = SK.GetEntity(gs.entity[1])->VectorGetNum();
+		v0 = v0.WithMagnitude(1);
+		v1 = v1.WithMagnitude(1);
+		
+		if (!(SS.revisionUnlockKey && 0x1)){//RT Pevious stuff
+			Printf(true, "  vectorA = " PT_AS_NUM, CO(v0));
+			Printf(false, "  vectorB = " PT_AS_NUM, CO(v1));
+		}
+		else 							//Name the vectors
+		{	//RT named lines Substituting above with names
+			Request *rLn1 = SK.GetRequest0(gs.entity[0].request());	//Get object containing the strings
+			Request *rLn2 = SK.GetRequest0(gs.entity[1].request());	//Return object containing the strings
+			if (rLn1){		// Only if the request exists
+				Printf(false, "Vector %s  = " PT_AS_NUM, rLn1->str.str, CO(v0));
+				Printf(false, "Vector %s  = " PT_AS_NUM, rLn2->str.str, CO(v1));
+			}
+		}									//RT*****************END showing named lines
         double theta = acos(v0.Dot(v1));
         Printf(true,  "    angle = %Fi%2%E degrees", theta*180/PI);
         while(theta < PI/2) theta += PI;
@@ -293,6 +345,12 @@ void TextWindow::DescribeSelection(void) {
     } else if(gs.n == 0 && gs.constraints == 1) {
         Printf(false, "%FtSELECTED:%E %s",
             SK.GetConstraint(gs.constraint[0])->DescriptionString());
+		if (SS.revisionUnlockKey && 0x1){
+			Constraint *c = SK.GetConstraint(gs.constraint[0]);
+			char *s = c->DescriptionString();
+			TextWindow::txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
+			Printf(false, "%FtSELECTED:%E %s", s);
+		}
     } else {
         int n = SS.GW.selection.n;
         Printf(false, "%FtSELECTED:%E %d item%s", n, n == 1 ? "" : "s");
@@ -329,7 +387,21 @@ void TextWindow::DescribeSelection(void) {
             0,
             &ScreenAssignSelectionToStyle);
     }
-
+	if (SS.revisionUnlockKey && 0x1){
+		if (e){
+			Group *g = SK.GetGroup(e->group);
+			Printf(true,
+				"%Fl%Ll%D%f%s",		
+				//%D=data to pass to function
+				//%f =function 
+				//%s=function description
+				g->h.v, (&TextWindow::ScreenActivateGroup), "Activate group");
+		}
+		else
+		{
+			// more than one entity was selected
+		}
+	}
     Printf(true, "%Fl%f%Ll(unselect all)%E", &TextWindow::ScreenUnselectAll);
 }
 

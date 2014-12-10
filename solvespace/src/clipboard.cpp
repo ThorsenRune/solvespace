@@ -426,7 +426,7 @@ void GraphicsWindow::MenuClipboard(int id) {
             SS.GW.DeleteSelection();
             break;
 
-        default: oops();
+        default: ERRMSG_RT();
     }
 }
 

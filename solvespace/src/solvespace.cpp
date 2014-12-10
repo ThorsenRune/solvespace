@@ -83,6 +83,9 @@ void SolveSpace::Init(char *cmdLine) {
     // Show toolbar in the graphics window
     showToolbar = CnfThawBool(true, "ShowToolbar");
 	copyConstraints = CnfThawBool(false, "CopyConstraints");
+	solveOptions =		CnfThawInt(false, "solveOptions");
+	revisionUnlockKey = CnfThawInt(false, "revisionUnlockKey");
+	SS.revisionUnlockKey = 0x01;						//RT Set first revion flag, todo: make a menu and let user select the level
     // Recent files menus
     for(i = 0; i < MAX_RECENT; i++) {
         char name[100];
@@ -182,7 +185,8 @@ void SolveSpace::Exit(void) {
     // Show toolbar in the graphics window
     CnfFreezeBool(showToolbar, "ShowToolbar");
 	CnfFreezeBool(copyConstraints, "CopyConstraints");
-
+	CnfFreezeInt(solveOptions, "solveOptions");
+	CnfFreezeInt(revisionUnlockKey, "revisionUnlockKey");			//
     // And the default styles, colors and line widths and such.
     Style::FreezeDefaultStyles();
 
@@ -350,8 +354,8 @@ bool SolveSpace::OkayToStartNewFile(void) {
 
         case SAVE_CANCEL:
             return false;
-        
-        default: oops(); break;
+
+        default: ERRMSG_RT(); break;
     }
 }
 
@@ -364,7 +368,8 @@ void SolveSpace::UpdateWindowTitle(void) {
         SetWindowTitle(buf);
     }
 }
-
+char exportFileLast[MAX_PATH] = "";								//RT:Remember the last export filename  
+int exportMenuLast = GraphicsWindow::MNU_EXPORT_MESH;							//RT:Remember the last export menu  
 void SolveSpace::MenuFile(int id) {
     if(id >= RECENT_OPEN && id < (RECENT_OPEN+MAX_RECENT)) {
         if(!SS.OkayToStartNewFile()) return;
@@ -382,7 +387,7 @@ void SolveSpace::MenuFile(int id) {
         SS.AfterNewFile();
         return;
     }
-
+	if (id == GraphicsWindow::MNU_EXPORT_AGAIN) 	id = exportMenuLast; 
     switch(id) {
         case GraphicsWindow::MNU_NEW:
             if(!SS.OkayToStartNewFile()) break;
@@ -420,7 +425,8 @@ void SolveSpace::MenuFile(int id) {
         case GraphicsWindow::MNU_EXPORT_PNG: {
             char exportFile[MAX_PATH] = "";
             if(!GetSaveFile(exportFile, PNG_EXT, PNG_PATTERN)) break;
-            SS.ExportAsPngTo(exportFile); 
+            SS.ExportAsPngTo(exportFile);
+			exportMenuLast = id;
             break;
         }
 
@@ -440,37 +446,42 @@ void SolveSpace::MenuFile(int id) {
                         "text window.");
             }
 
-            SS.ExportViewOrWireframeTo(exportFile, false); 
+            SS.ExportViewOrWireframeTo(exportFile, false);
+			exportMenuLast = id;
             break;
         }
 
         case GraphicsWindow::MNU_EXPORT_WIREFRAME: {
             char exportFile[MAX_PATH] = "";
             if(!GetSaveFile(exportFile, V3D_EXT, V3D_PATTERN)) break;
-            SS.ExportViewOrWireframeTo(exportFile, true); 
+            SS.ExportViewOrWireframeTo(exportFile, true);
+			exportMenuLast = id;
             break;
         }
 
         case GraphicsWindow::MNU_EXPORT_SECTION: {
             char exportFile[MAX_PATH] = "";
             if(!GetSaveFile(exportFile, VEC_EXT, VEC_PATTERN)) break;
-            SS.ExportSectionTo(exportFile); 
+            SS.ExportSectionTo(exportFile);
+			exportMenuLast = id;
             break;
         }
 
         case GraphicsWindow::MNU_EXPORT_MESH: {
             char exportFile[MAX_PATH] = "";
-            if(!GetSaveFile(exportFile, MESH_EXT, MESH_PATTERN)) break;
-            SS.ExportMeshTo(exportFile); 
+			if (!GetSaveFile(exportFileLast, MESH_OBJ_EXT, MESH_PATTERN)) break;
+			SS.ExportMeshTo(exportFileLast);
+			exportMenuLast = id;
             break;
         }
 
         case GraphicsWindow::MNU_EXPORT_SURFACES: {
             char exportFile[MAX_PATH] = "";
-            if(!GetSaveFile(exportFile, SRF_EXT, SRF_PATTERN)) break;
+			if (!GetSaveFile(exportFileLast, SRF_EXT, SRF_PATTERN)) break;
             StepFileWriter sfw;
             ZERO(&sfw);
-            sfw.ExportSurfacesTo(exportFile); 
+			sfw.ExportSurfacesTo(exportFileLast);
+			exportMenuLast = id;
             break;
         }
 
@@ -479,7 +490,7 @@ void SolveSpace::MenuFile(int id) {
             SS.Exit();
             break;
 
-        default: oops();
+		default: ERRMSG_RT();		//Error
     }
 
     SS.UpdateWindowTitle();
@@ -524,7 +535,7 @@ void SolveSpace::MenuAnalyze(int id) {
             SMesh *m = &(g->displayMesh);
             SKdNode *root = SKdNode::From(m);
             bool inters, leaks;
-            root->MakeCertainEdgesInto(&(SS.nakedEdges), 
+            root->MakeCertainEdgesInto(&(SS.nakedEdges),
                 SKdNode::NAKED_OR_SELF_INTER_EDGES, true, &inters, &leaks);
 
             InvalidateGraphics();
@@ -573,7 +584,7 @@ void SolveSpace::MenuAnalyze(int id) {
 
         case GraphicsWindow::MNU_VOLUME: {
             SMesh *m = &(SK.GetGroup(SS.GW.activeGroup)->displayMesh);
-           
+
             double vol = 0;
             int i;
             for(i = 0; i < m->l.n; i++) {
@@ -603,7 +614,7 @@ void SolveSpace::MenuAnalyze(int id) {
 
                 // Triangles on edge don't contribute
                 if(fabs(n.z) < LENGTH_EPS) continue;
-               
+
                 // The plane has equation p dot n = a dot n
                 double d = (tr.a).Dot(n);
                 // nx*x + ny*y + nz*z = d
@@ -612,10 +623,10 @@ void SolveSpace::MenuAnalyze(int id) {
 
                 double mac = tr.c.y/tr.c.x, mbc = (tr.c.y - tr.b.y)/tr.c.x;
                 double xc = tr.c.x, yb = tr.b.y;
-               
+
                 // I asked Maple for
                 //    int(int(A*x + B*y +C, y=mac*x..(mbc*x + yb)), x=0..xc);
-                double integral = 
+                double integral =
                     (1.0/3)*(
                         A*(mbc-mac)+
                         (1.0/2)*B*(mbc*mbc-mac*mac)
@@ -686,7 +697,7 @@ void SolveSpace::MenuAnalyze(int id) {
                 Error("Bad selection for trace; select a single point.");
             }
             break;
-            
+
         case GraphicsWindow::MNU_STOP_TRACING: {
             char exportFile[MAX_PATH] = "";
             if(GetSaveFile(exportFile, CSV_EXT, CSV_PATTERN)) {
@@ -712,7 +723,7 @@ void SolveSpace::MenuAnalyze(int id) {
             break;
         }
 
-        default: oops();
+        default: ERRMSG_RT();
     }
 }
 
@@ -721,10 +732,12 @@ void SolveSpace::MenuHelp(int id) {
         case GraphicsWindow::MNU_WEBSITE:
             OpenWebsite("http://solvespace.com/helpmenu");
             break;
-        
+
         case GraphicsWindow::MNU_ABOUT:
             Message(
-"This is SolveSpace version " PACKAGE_VERSION ".\n"
+"This is SolveSpace version  2.1eMVe8-RT1.1\n"
+"RT1:UI Modifications - change group by PGUP/DWN keys. Inverted Deletion logic\n"
+"Naming entities and constraints"
 "\n"
 "Built " __TIME__ " " __DATE__ ".\n"
 "\n"
@@ -738,10 +751,11 @@ void SolveSpace::MenuHelp(int id) {
 "law. For details, visit http://gnu.org/licenses/\n"
 "\n"
 "\xa9 2008-2013 Jonathan Westhues and other authors.\n"
+
 );
             break;
 
-        default: oops();
+        default: ERRMSG_RT();
     }
 }
 

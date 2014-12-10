@@ -41,6 +41,9 @@
 // Debugging functions
 #define oops() do { dbp("oops at line %d, file %s\n", __LINE__, __FILE__); \
                     if(0) *(char *)0 = 1; exit(-1); } while(0)
+// A softer alternative to the above error message, leaving more information on the screen, not just chrashing
+#define ERRMSG_RT() do { Error("Error at line %d, file %s\n", __LINE__, __FILE__); \
+                      } while(0)
 
 #ifndef min
 #   define min(x, y) ((x) < (y) ? (x) : (y))
@@ -149,10 +152,11 @@ int SaveFileYesNoCancel(void);
 #define PNG_EXT "png"
 // Triangle mesh
 #define MESH_PATTERN \
-    PAT1("STL Mesh", "stl") \
     PAT1("Wavefront OBJ Mesh", "obj") \
+    PAT1("STL Mesh", "stl") \
     ENDPAT
 #define MESH_EXT "stl"
+#define MESH_OBJ_EXT "obj"
 // NURBS surfaces
 #define SRF_PATTERN PAT2("STEP File", "step", "stp") ENDPAT
 #define SRF_EXT "step"
@@ -215,6 +219,8 @@ int64_t GetMilliseconds(void);
 int64_t GetUnixTime(void);
 
 void dbp(const char *str, ...);
+void dbp_RT(const char *str, ...);					//A softer version of debug print without the brutal shutdown!?
+
 #define DBPTRI(tri) \
     dbp("tri: (%.3f %.3f %.3f) (%.3f %.3f %.3f) (%.3f %.3f %.3f)", \
         CO((tri).a), CO((tri).b), CO((tri).c))
@@ -654,6 +660,7 @@ public:
     inline ENTITY  *GetEntityNoOops (hEntity  h) { return entity. FindByIdNoOops(h); }    
     inline Param   *GetParam  (hParam   h) { return param.  FindById(h); }
     inline Request *GetRequest(hRequest h) { return request.FindById(h); }
+	inline Request *GetRequest0(hRequest h) { return request.FindByIdNoOops(h); }		//RT return hRequest or null
     inline Group   *GetGroup  (hGroup   h) { return group.  FindById(h); }
     // Styles are handled a bit differently.
 
@@ -722,6 +729,9 @@ public:
     bool     exportPwlCurves;
     bool     exportCanvasSizeAuto;
 	bool	 copyConstraints;
+	int		 revisionUnlockKey;				//RT Binary match for unlocking specific revisions RT1=&1
+	int		 solveOptions=0x1;				//RT: Flags for  controlling the solver
+											//   0x1	: Dont attempt to propose fixes jacobian singularity
     struct {
         float   left;
         float   right;

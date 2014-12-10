@@ -20,6 +20,9 @@
 #define S     SHIFT_MASK
 #define C     CTRL_MASK
 #define F(k)  (FUNCTION_KEY_BASE+(k))
+//RT2014 Extra keyboard definitions
+#define PGUP    PGUP_KEY
+#define PGDN	PGDWN_KEY
 const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 //level
 //   label                          id                  accel   fn
@@ -30,6 +33,7 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 { 1, "&Save",                       MNU_SAVE,           C|'S',  mFile },
 { 1, "Save &As...",                 MNU_SAVE_AS,        0,      mFile },
 { 1,  NULL,                         0,                  0,      NULL  },
+{ 1, "&Export Again...",			MNU_EXPORT_AGAIN,	0,		mFile },	//RT Repeat last export
 { 1, "Export &Image...",            MNU_EXPORT_PNG,     0,      mFile },
 { 1, "Export 2d &View...",          MNU_EXPORT_VIEW,    0,      mFile },
 { 1, "Export 2d &Section...",       MNU_EXPORT_SECTION, 0,      mFile },
@@ -57,7 +61,10 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 { 1, "Select &All",                 MNU_SELECT_ALL,     C|'A',  mEdit },
 { 1, "&Unselect All",               MNU_UNSELECT_ALL,   ESC,    mEdit },
 { 1, NULL, 0, 0, NULL },
-{ 1, "Cop&y Constraints", MNU_COPY_CONSTRAINTS, 0, mEdit },
+{ 1, "Rename",                      MNU_EDIT_RENAME,     F(2), mEdit },
+{ 1, "Cop&y Constraints",			MNU_COPY_CONSTRAINTS, 0,   mEdit },
+{ 1, "RT2014 version", MNU_VERSION_RT, 0, mEdit },
+{ 1, "Bad constraint search (CPU Killer)", MNU_JACOBIAN_FIND_BAD, 0, mEdit },
 
 
 { 0, "&View",                       0,                  0,      NULL  },
@@ -66,7 +73,7 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 { 1, "Zoom To &Fit",                MNU_ZOOM_TO_FIT,    'F',    mView },
 { 1,  NULL,                         0,                  0,      NULL  },
 { 1, "Align View to &Workplane",    MNU_ONTO_WORKPLANE, 'W',    mView },
-{ 1, "Nearest &Ortho View",         MNU_NEAREST_ORTHO,  F(2),   mView },
+{ 1, "Nearest &Ortho View",         MNU_NEAREST_ORTHO,  '0',   mView },
 { 1, "Nearest &Isometric View",     MNU_NEAREST_ISO,    F(3),   mView },
 { 1, "&Center View At Point",       MNU_CENTER_VIEW,    F(4),   mView },
 { 1,  NULL,                         0,                  0,      NULL  },
@@ -78,6 +85,10 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 #endif
 { 1, "Show &Toolbar",               MNU_SHOW_TOOLBAR,   0,      mView },
 { 1, "Show Text &Window",           MNU_SHOW_TEXT_WND,  '\t',   mView },
+{ 1, "Test	",						MNU_VIEW_TEST,		F(12),	mView },		//RT2014: Experiment with how to implement - activate next group - method
+{ 1, "Activate Next Group",			MNU_SHOW_NEXT_GROUP, PGDN,	mView },		//RT2014:  activate next group - method
+{ 1, "Activate Previous Group",		MNU_SHOW_PREV_GROUP, PGUP,	mView },		//RT2014: activate previous group - method
+
 { 1,  NULL,                         0,                  0,      NULL  },
 { 1, "Dimensions in &Inches",       MNU_UNITS_INCHES,   0,      mView },
 { 1, "Dimensions in &Millimeters",  MNU_UNITS_MM,       0,      mView },
@@ -163,6 +174,8 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 #undef S
 #undef C
 #undef F
+#undef PGUP
+#undef PGDN
 
 bool MakeAcceleratorLabel(int accel, char *out) {
     if(!accel) {
@@ -190,10 +203,12 @@ bool MakeAcceleratorLabel(int accel, char *out) {
 
         case GraphicsWindow::ESCAPE_KEY: key = "Esc"; break;
         case GraphicsWindow::DELETE_KEY: key = "Del"; break;
+		case GraphicsWindow::PGUP_KEY: key = "Pg Up"; break;
+		case GraphicsWindow::PGDWN_KEY: key = "Pg Dwn"; break;
     }
 
-    if(key[0] <  '!' || key[0] >  '~') oops();
-    if(key[0] >= 'a' && key[0] <= 'z') oops();
+    if(key[0] <  '!' || key[0] >  '~') ERRMSG_RT();
+    if(key[0] >= 'a' && key[0] <= 'z') ERRMSG_RT();
 
     sprintf(out, "%s%s%s", ctrl, shift, key);
     return true;
@@ -363,7 +378,7 @@ void GraphicsWindow::ZoomToFit(bool includingInvisibles) {
 
     offset = offset.Plus(projRight.ScaledBy(-xm)).Plus(
                          projUp.   ScaledBy(-ym));
-  
+
     // And based on this, we calculate the scale and offset
     if(EXACT(dx == 0 && dy == 0)) {
         scale = 5;
@@ -394,6 +409,120 @@ void GraphicsWindow::ZoomToFit(bool includingInvisibles) {
     }
 }
 
+//RT   **************************************************** Start of intermistic code *************************************************************
+//RT2014	These functions break the coding style, but right now I don't know how and where to put the code, sorry its realy ugly I know
+
+Group *GroupAfter(hGroup hFromGroup){			// Return the group after a given grouphandle
+	Group *g;
+	Group *GroupAfter1 = nullptr;
+	for (g = SK.group.First(); g; g = SK.group.NextAfter(g)) {//RT: Run through all groups and select the group before 'FromGroup'
+		if (hFromGroup.v == g->h.v)			//Found
+		{
+			return  SK.group.NextAfter(g);	//				Return the group object
+		}
+	}
+	return nullptr;		// Not found so return nullpointer
+}
+
+Group *GroupBefore(hGroup hFromGroup){				// Return the group before a given group handle
+	Group *g;
+	Group *PreviousGroup = nullptr;
+	for (g = SK.group.NextAfter(SK.group.First()); g; g = SK.group.NextAfter(g)) {//RT: Run through all groups starting from second group
+		if (hFromGroup.v == g->h.v)	//Found active
+		{
+			return  PreviousGroup ;	//				Return the group object
+		}
+		PreviousGroup = g;	// last group encountered
+	}
+	return nullptr;		// Not found so return nullpointer
+}
+void ActivateGroup(Group *SetGroup = nullptr){
+	if (SetGroup != nullptr){
+		SS.GW.activeGroup = SetGroup->h;
+		SetGroup->visible = TRUE;								//RT:Make  visible
+		SK.GetGroup(SS.GW.activeGroup)->Activate();				//Activate the group
+		SS.GW.EnsureValidActives();
+
+	}
+}
+void ActivatePreviousGroup(void){
+Group *SetGroup = nullptr;
+	SetGroup = GroupBefore(SS.GW.activeGroup);
+	ActivateGroup(SetGroup);
+}
+void ActivateNextGroup(void){
+Group *SetGroup = nullptr;
+	SetGroup = GroupAfter(SS.GW.activeGroup);
+	ActivateGroup(SetGroup);
+}
+int GoDirection = 10;
+void RTTest(int Param){	//RT2014 Prototyping new code
+
+	INT32  srcGrp = 3, dstGrp = 2,swapGrp=4 ;	//Just for prototyping, should be selecable in some way
+	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
+		Request *r = &(SK.request.elem[i]);		//Move old elements in destinations to a swap group
+		if (r->group.v == dstGrp){
+			r->group.v = swapGrp;
+		}
+	}
+	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
+		if (r->group.v == srcGrp)				// Move source to destination
+		{
+			r->group.v = dstGrp;
+
+		}
+	}										//Hereafter move swap to source group
+
+	SS.GenerateAll(0, INT_MAX);
+	return;
+	SS.GW.GroupSelection();				// Prepare selection
+	if (SS.GW.gs.entities < 1 || SS.GW.gs.n <1) return;	//Return if nothing is selected
+	// Go through selected entities
+	for (int i = 0; i < SS.GW.gs.entities; i++) {
+		hEntity he = SS.GW.gs.entity[i];
+		if (he.isFromRequest()) {
+			hRequest hr = he.request();
+			Request *r = SK.GetRequest(hr);
+			if (r->group.v == srcGrp){
+				r->group.v = dstGrp;		// Move the request entity
+			}
+		}
+	}
+
+	 
+
+}
+
+
+
+void doUnselectAll(){				//RT copied the unselect all code here
+    SS.GW.GroupSelection();
+            // If there's nothing selected to de-select, and no operation
+     if(SS.GW.gs.n               == 0 &&
+               SS.GW.gs.constraints     == 0 &&
+               SS.GW.pending.operation  == 0) return;
+    SS.GW.ClearSuper();
+    SS.TW.HideEditControl();
+    SS.nakedEdges.Clear();
+    SS.justExportedInfo.draw = false;
+    // This clears the marks drawn to indicate which points are
+    // still free to drag.
+    Param *p;
+    for(p = SK.param.First(); p; p = SK.param.NextAfter(p)) {
+        p->free = false;
+            }
+}
+
+void doRenameEntity(){      //RT Rename the currently selected entity
+    Entity *e;
+	if (SS.GW.gs.n == 1 && (SS.GW.gs.points == 1 || SS.GW.gs.entities == 1)) {
+		e = SK.GetEntity(SS.GW.gs.points == 1 ? SS.GW.gs.point[0] : SS.GW.gs.entity[0]);
+		TextWindow::ScreenEditTtfText(108, e->h.request().v);
+	}
+	else
+        doUnselectAll();
+}
+//RT   **************************************************** End of new code *************************************************************
 void GraphicsWindow::MenuView(int id) {
     switch(id) {
         case MNU_ZOOM_IN:
@@ -531,7 +660,16 @@ void GraphicsWindow::MenuView(int id) {
             SS.GW.EnsureValidActives();
             break;
 
-        case MNU_UNITS_INCHES:
+        case MNU_VIEW_TEST:								//RT Prototyping experimental codes
+			RTTest(1);
+            break;
+		case MNU_SHOW_NEXT_GROUP:								//RT Activate the next group from keyboard
+			ActivateNextGroup();
+			break;
+		case MNU_SHOW_PREV_GROUP:								//RT Activate the next group from keyboard
+			ActivatePreviousGroup();
+			break;
+		case MNU_UNITS_INCHES:
             SS.viewUnits = SolveSpace::UNIT_INCHES;
             SS.later.showTW = true;
             SS.GW.EnsureValidActives();
@@ -548,7 +686,7 @@ void GraphicsWindow::MenuView(int id) {
             SS.GW.EnsureValidActives();
             break;
 
-        default: oops();
+        default: ERRMSG_RT();
     }
     InvalidateGraphics();
 }
@@ -624,6 +762,8 @@ void GraphicsWindow::EnsureValidActives(void) {
     CheckMenuById(MNU_PERSPECTIVE_PROJ, SS.usePerspectiveProj);
     CheckMenuById(MNU_SHOW_GRID, SS.GW.showSnapGrid);
 	CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
+	CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey&&1);
+	CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions&&1);
 
 #ifdef HAVE_FLTK_FULLSCREEN
     CheckMenuById(MNU_FULL_SCREEN, FullScreenIsActive());
@@ -693,7 +833,7 @@ Vector GraphicsWindow::SnapToGrid(Vector p) {
     pp.x = floor((pp.x / SS.gridSpacing) + 0.5)*SS.gridSpacing;
     pp.y = floor((pp.y / SS.gridSpacing) + 0.5)*SS.gridSpacing;
     pp.z = 0;
-    
+
     return pp.ScaleOutOfCsys(wu, wv, wn).Plus(wo);
 }
 
@@ -757,7 +897,7 @@ void GraphicsWindow::MenuEdit(int id) {
 
                     Vector st = e->EndpointStart(),
                            fi = e->EndpointFinish();
-                   
+
                     bool onChain = false, alreadySelected = false;
                     List<Selection> *ls = &(SS.GW.selection);
                     for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
@@ -875,7 +1015,7 @@ void GraphicsWindow::MenuEdit(int id) {
         case MNU_UNDO:
             SS.UndoUndo();
             break;
-        
+
         case MNU_REDO:
             SS.UndoRedo();
             break;
@@ -890,8 +1030,17 @@ void GraphicsWindow::MenuEdit(int id) {
 			SS.copyConstraints = !SS.copyConstraints;
 			CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
 			break;
+		case MNU_VERSION_RT:
+			SS.revisionUnlockKey = (SS.revisionUnlockKey ^ 0x1);	//XOR flag constant
+			break;
+		case MNU_JACOBIAN_FIND_BAD:
+			SS.solveOptions = (SS.solveOptions ^ 0x1);;
+			break;
 
-        default: oops();
+        case MNU_EDIT_RENAME:
+            doRenameEntity();
+            break;
+        default: ERRMSG_RT();
     }
 }
 
@@ -985,7 +1134,7 @@ c:
             SS.GW.SplitLinesOrCurves();
             break;
 
-        default: oops();
+        default: ERRMSG_RT();
     }
 }
 

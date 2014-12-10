@@ -559,7 +559,7 @@ void TextWindow::ScreenChangeStyleColor(int link, uint32_t v) {
         em = EDIT_STYLE_FILL_COLOR;
         rgb = s->fillColor;
     } else {
-        oops();
+        ERRMSG_RT();
     }
     SS.TW.ShowEditControlWithColorPicker(row, col, rgb);
     SS.TW.edit.style = hs;

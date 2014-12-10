@@ -8,7 +8,6 @@
 
 char *Constraint::DescriptionString(void) {
     static char ret[1024];
-
     const char *s;
     switch(type) {
         case POINTS_COINCIDENT:     s = "pts-coincident"; break;
@@ -47,7 +46,6 @@ char *Constraint::DescriptionString(void) {
         case COMMENT:               s = "comment"; break;
         default:                    s = "???"; break;
     }
-
     sprintf(ret, "c%03x-%s", h.v, s);
     return ret;
 }

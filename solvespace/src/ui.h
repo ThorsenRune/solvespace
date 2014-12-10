@@ -90,12 +90,12 @@ public:
     uint8_t *HsvPattern1d(double h, double s);
     void ColorPickerDone(void);
     bool DrawOrHitTestColorPicker(int how, bool leftDown, double x, double y);
-   
+
     void Init(void);
     void MakeColorTable(const Color *in, float *out);
     void Printf(bool half, const char *fmt, ...);
     void ClearScreen(void);
-   
+
     void Show(void);
 
     // State for the screen that we are showing in the text window.
@@ -226,6 +226,7 @@ public:
     void ShowTangentArc(void);
     // Special screen, based on selection
     void DescribeSelection(void);
+	void txtEntityDescription_RT(Entity * e);			//Helper for DescribeSelection
 
     void GoToScreen(int screen);
 
@@ -236,12 +237,14 @@ public:
     static void ScreenUnselectAll(int link, uint32_t v);
 
     // and the rest from the stuff in textscreens.cpp
-    static void ScreenSelectGroup(int link, uint32_t v);
-    static void ScreenActivateGroup(int link, uint32_t v);
+    static void ScreenSelectGroup(int link, uint32_t v);					//RT2014 Screen with information about the group
+    static void ScreenActivateGroup(int link, uint32_t v);					//RT2014 Activate the group that the user clicked
     static void ScreenToggleGroupShown(int link, uint32_t v);
     static void ScreenHowGroupSolved(int link, uint32_t v);
     static void ScreenShowGroupsSpecial(int link, uint32_t v);
     static void ScreenDeleteGroup(int link, uint32_t v);
+	
+	int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString);    //RT2014 Supplementary description of constraints
 
     static void ScreenHoverConstraint(int link, uint32_t v);
     static void ScreenHoverRequest(int link, uint32_t v);
@@ -333,6 +336,7 @@ public:
         MNU_EXPORT_VIEW,
         MNU_EXPORT_SECTION,
         MNU_EXPORT_WIREFRAME,
+		MNU_EXPORT_AGAIN,										//Repeat the last export type
         MNU_EXIT,
         // View
         MNU_ZOOM_IN,
@@ -347,6 +351,9 @@ public:
         MNU_SHOW_MENU_BAR,
         MNU_SHOW_TOOLBAR,
         MNU_SHOW_TEXT_WND,
+		MNU_VIEW_TEST,			//RT  Test menu
+		MNU_SHOW_NEXT_GROUP,	//RT  Activate the next group
+		MNU_SHOW_PREV_GROUP,	//RT  Activate the previous group
         MNU_UNITS_INCHES,
         MNU_UNITS_MM,
         MNU_FULL_SCREEN,
@@ -365,6 +372,9 @@ public:
         MNU_UNSELECT_ALL,
         MNU_REGEN_ALL,
 		MNU_COPY_CONSTRAINTS,
+		MNU_VERSION_RT,
+		MNU_JACOBIAN_FIND_BAD,
+		MNU_EDIT_RENAME,
         // Request
         MNU_SEL_WORKPLANE,
         MNU_FREE_IN_3D,
@@ -420,6 +430,8 @@ public:
     } MenuId;
     typedef void MenuHandler(int id);
     enum {
+		PGUP_KEY	= 33,
+		PGDWN_KEY	= 34,
         ESCAPE_KEY = 27,
         DELETE_KEY = 127,
         FUNCTION_KEY_BASE = 0xf0
@@ -522,7 +534,7 @@ public:
         hEntity         circle;
         hEntity         normal;
         hConstraint     constraint;
-        
+
         const char     *description;
     } pending;
     void ClearPending(void);
@@ -541,7 +553,7 @@ public:
         Vector p0, p1;
         Vector u, v;
         double r, theta0, theta1, dtheta;
-        
+
         void MakeFromEntity(hEntity he, bool reverse);
         Vector PointAt(double t);
         Vector TangentAt(double t);
@@ -560,7 +572,7 @@ public:
     void ReplacePointInConstraints(hEntity oldpt, hEntity newpt);
     void FixConstraintsForRequestBeingDeleted(hRequest hr);
     void FixConstraintsForPointBeingDeleted(hEntity hpt);
-    
+
     // The current selection.
     class Selection {
     public:
