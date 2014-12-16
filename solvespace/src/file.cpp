@@ -114,9 +114,9 @@ const SolveSpace::SaveTable SolveSpace::SAVED[] = {
     { 'g',  "Group.relaxConstraints",   'b',    &(SS.sv.g.relaxConstraints)   },
     { 'g',  "Group.allDimsReference",   'b',    &(SS.sv.g.allDimsReference)   },
     { 'g',  "Group.scale",              'f',    &(SS.sv.g.scaleImp)             },
-	{ 'g', "Group.scaleX",				'f',	&(SS.sv.g.scaleImported.x)		},
-	{ 'g', "Group.scaleY",				'f',	&(SS.sv.g.scaleImported.y)		},
-	{ 'g', "Group.scaleZ",				'f',	&(SS.sv.g.scaleImported.z)		},
+	{ 'g', "Group.scaleX",				'f',	&(SS.sv.g.scaleImported.x)		},//RT141216
+	{ 'g', "Group.scaleY",				'f',	&(SS.sv.g.scaleImported.y)		},//RT141216
+	{ 'g', "Group.scaleZ",				'f',	&(SS.sv.g.scaleImported.z)		},//RT141216
 	{ 'g', "Group.remap",				'M',	&(SS.sv.g.remap) },
     { 'g',  "Group.impFile",            'P',    &(SS.sv.g.impFile)            },
     { 'g',  "Group.impFileRel",         'P',    &(SS.sv.g.impFileRel)         },
@@ -182,9 +182,9 @@ const SolveSpace::SaveTable SolveSpace::SAVED[] = {
     { 'c',  "Constraint.other2",        'b',    &(SS.sv.c.other2)             },
     { 'c',  "Constraint.reference",     'b',    &(SS.sv.c.reference)          },
     { 'c',  "Constraint.comment",       'N',    &(SS.sv.c.comment)            },
-    { 'c',  "Constraint.disp.offset.x", 'f',    &(SS.sv.c.disp.offset.x)      },
-    { 'c',  "Constraint.disp.offset.y", 'f',    &(SS.sv.c.disp.offset.y)      },
-    { 'c',  "Constraint.disp.offset.z", 'f',    &(SS.sv.c.disp.offset.z)      },
+    { 'c',  "Constraint.disp.offset.x", 'f',    &(SS.sv.c.disp.offset.x)      },		
+	{ 'c', "Constraint.disp.offset.y",	'f',	&(SS.sv.c.disp.offset.y)		},		 
+	{ 'c', "Constraint.disp.offset.z",	'f',	&(SS.sv.c.disp.offset.z)		},		 
     { 'c',  "Constraint.disp.style",    'x',    &(SS.sv.c.disp.style)         },
 
     { 's',  "Style.h.v",                'x',    &(SS.sv.s.h.v)                },
