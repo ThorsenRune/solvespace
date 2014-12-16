@@ -113,8 +113,11 @@ const SolveSpace::SaveTable SolveSpace::SAVED[] = {
     { 'g',  "Group.suppress",           'b',    &(SS.sv.g.suppress)           },
     { 'g',  "Group.relaxConstraints",   'b',    &(SS.sv.g.relaxConstraints)   },
     { 'g',  "Group.allDimsReference",   'b',    &(SS.sv.g.allDimsReference)   },
-    { 'g',  "Group.scale",              'f',    &(SS.sv.g.scale)              },
-    { 'g',  "Group.remap",              'M',    &(SS.sv.g.remap)              },
+    { 'g',  "Group.scale",              'f',    &(SS.sv.g.scaleImp)             },
+	{ 'g', "Group.scaleX",				'f',	&(SS.sv.g.scaleImported.x)		},
+	{ 'g', "Group.scaleY",				'f',	&(SS.sv.g.scaleImported.y)		},
+	{ 'g', "Group.scaleZ",				'f',	&(SS.sv.g.scaleImported.z)		},
+	{ 'g', "Group.remap",				'M',	&(SS.sv.g.remap) },
     { 'g',  "Group.impFile",            'P',    &(SS.sv.g.impFile)            },
     { 'g',  "Group.impFileRel",         'P',    &(SS.sv.g.impFileRel)         },
 
@@ -202,14 +205,14 @@ const SolveSpace::SaveTable SolveSpace::SAVED[] = {
 };
 
 union SAVEDptr {
-    IdList<EntityMap,EntityId> M;
+    IdList<EntityMap,EntityId> M;		//RTc: has elem,n
     NameStr  N;
     char     P;
-    bool     b;
+    bool     b;							//RTc: boolean
     RgbColor c;
-    int      d;
-    double   f;
-    uint32_t x;
+    int      d;							//RTc: a signed decimal
+    double   f;							//RTc: store a floating-point number
+    uint32_t x;							//RTc: value of ..
 };
 
 void SolveSpace::SaveUsingTable(int type) {
@@ -218,6 +221,7 @@ void SolveSpace::SaveUsingTable(int type) {
         if(SAVED[i].type != type) continue;
 
         int fmt = SAVED[i].fmt;
+        // the following will set a pointer p according to the type lookup in SAVED e.g. &(SS.sv.g.opA.v) if type = "Group.opA.v"
         union SAVEDptr *p = (union SAVEDptr *)SAVED[i].ptr;
         // Any items that aren't specified are assumed to be zero
         if(fmt == 'N' && p->N.str[0] == '\0')   continue;
@@ -256,8 +260,17 @@ void SolveSpace::SaveUsingTable(int type) {
 bool SolveSpace::SaveToFile(char *filename) {
     // Make sure all the entities are regenerated up to date, since they
     // will be exported.
-    SS.GenerateAll(0, INT_MAX);
-
+	if (SS.revisionUnlockKey && REV1RT){	//RT:renderDetailWhenSaving  fixed zoom will be applied before saving so the level of detail can be kept between files.
+		double remember = SS.GW.scaleWin;
+		if (renderDetailWhenSaving < 1)  renderDetailWhenSaving = SS.GW.scaleWin;
+		SS.GW.scaleWin = renderDetailWhenSaving;
+		SS.GenerateAll(0, INT_MAX);
+		SS.GW.scaleWin = remember;
+	}
+	else
+	{
+		SS.GenerateAll(0, INT_MAX);
+	}
     fh = fopen(filename, "wb");
     if(!fh) {
         Error("Couldn't write to file '%s'", filename);
@@ -366,19 +379,25 @@ bool SolveSpace::SaveToFile(char *filename) {
     return true;
 }
 
-void SolveSpace::LoadUsingTable(char *key, char *val) {
+void SolveSpace::LoadUsingTable(char *key, char *val) {	//RTc:A read line has been split at '=' as key, val
     int i;
-    for(i = 0; SAVED[i].type != 0; i++) {
-        if(strcmp(SAVED[i].desc, key)==0) {
+    for(i = 0; SAVED[i].type != 0; i++) {	//RTc:  loop members of SAVED
+        if(strcmp(SAVED[i].desc, key)==0) {//RTc: Lookup a format for  'key' in 'saved' table
+        //set a pointer to a SS.sv structure......eg  &(SS.sv.g.opA.v)
             union SAVEDptr *p = (union SAVEDptr *)SAVED[i].ptr;
             unsigned int u = 0;
             switch(SAVED[i].fmt) {
-                case 'N': p->N.strcpy(val);        break;
-                case 'b': p->b = (atoi(val) != 0); break;
-                case 'd': p->d = atoi(val);        break;
-                case 'f': p->f = atof(val);        break;
-                case 'x': sscanf(val, "%x", &u); p->x = u; break;
-
+                case 'N': p->N.strcpy(val);        //RTc: text - name
+					break;
+                case 'b': p->b = (atoi(val) != 0); //RTc: boolean
+					break;
+                case 'd': p->d = atoi(val);        //a signed decimal number
+					break;
+                case 'f': p->f = atof(val);        //a floating-point number
+					break;
+                case 'x': sscanf(val, "%x", &u);	//RTc: u=hex number of (val)
+					p->x = u;
+					break;
                 case 'c':
                     sscanf(val, "%x", &u);
                     p->c = RgbColor::FromPackedInt(u);
@@ -416,12 +435,13 @@ void SolveSpace::LoadUsingTable(char *key, char *val) {
         }
     }
     if(SAVED[i].type == 0) {
+		Error("Unrecognized key in file: '%s = %s'", key, val);
         fileLoadError = true;
     }
 }
 
 bool SolveSpace::LoadFromFile(char *filename) {
-    allConsistent = false;
+    allConsistent = false;									//RT:donttry to display sketch yet
     fileLoadError = false;
 
     fh = fopen(filename, "rb");
@@ -433,34 +453,36 @@ bool SolveSpace::LoadFromFile(char *filename) {
     ClearExisting();
 
     memset(&sv, 0, sizeof(sv));
-    sv.g.scale = 1; // default is 1, not 0; so legacy files need this
-
+    sv.g.scaleImp = 1; // default is 1, not 0; so legacy files need this
+    sv.g.scaleImported.setSame(1.0);
     char line[1024];
     while(fgets(line, (int)sizeof(line), fh)) {
-        char *s = strchr(line, '\n');
+        char *s = strchr(line, '\n');		//RTc:Substitute \n (newline) with \0
         if(s) *s = '\0';
         // We should never get files with \r characters in them, but mailers
         // will sometimes mangle attachments.
-        s = strchr(line, '\r');
+        s = strchr(line, '\r');				//RTc:Substitute \r with \0
         if(s) *s = '\0';
 
-        if(*line == '\0') continue;
+        if(*line == '\0') continue;			//RTc:If string is empty, proceed to next
 
         char *e = strchr(line, '=');
-        if(e) {
-            *e = '\0';
+        if(e) {								//RTc:Is there a '=' in the line?
+            *e = '\0';						//RTc:	convert the value
             char *key = line, *val = e+1;
             LoadUsingTable(key, val);
-        } else if(strcmp(line, "AddGroup")==0) {
+        } else if(strcmp(line, "AddGroup")==0) {//RTc: addgroup command?
             SK.group.Add(&(sv.g));
             ZERO(&(sv.g));
-            sv.g.scale = 1; // default is 1, not 0; so legacy files need this
+            sv.g.scaleImp = 1; // default is 1, not 0; so legacy files need this
+            sv.g.scaleImported.setSame(1.0);
         } else if(strcmp(line, "AddParam")==0) {
             // params are regenerated, but we want to preload the values
             // for initial guesses
             SK.param.Add(&(sv.p));
             ZERO(&(sv.p));
         } else if(strcmp(line, "AddEntity")==0) {
+			continue;
             // entities are regenerated
         } else if(strcmp(line, "AddRequest")==0) {
             SK.request.Add(&(sv.r));
@@ -472,6 +494,7 @@ bool SolveSpace::LoadFromFile(char *filename) {
             SK.style.Add(&(sv.s));
             ZERO(&(sv.s));
         } else if(strcmp(line, VERSION_STRING)==0) {
+			continue;
             // do nothing, version string
         } else if(StrStartsWith(line, "Triangle ")      ||
                   StrStartsWith(line, "Surface ")       ||

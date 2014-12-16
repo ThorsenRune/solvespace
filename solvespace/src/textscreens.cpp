@@ -66,7 +66,7 @@ void TextWindow::ScreenShowGroupsSpecial(int link, uint32_t v) {
         }
     }
 }
-void TextWindow::ScreenActivateGroup(int link, uint32_t v) {	//RT2014 Activate the group that the user clicked upon
+void TextWindow::ScreenActivateGroup(int link, uint32_t v) {//RT2014 Activate the group that the user clicked upon
     hGroup hg = { v };
     Group *g = SK.GetGroup(hg);
     g->visible = true;
@@ -101,7 +101,8 @@ void TextWindow::ShowListOfGroups(void) {
          radioFalse[] = { ' ', (char)RADIO_FALSE, ' ', 0 },
          checkTrue[]  = { ' ', (char)CHECK_TRUE,  ' ', 0 },
          checkFalse[] = { ' ', (char)CHECK_FALSE, ' ', 0 };
-	Printf(true, "%Ft active");
+
+    Printf(true, "%Ft active");
     Printf(false, "%Ft    shown ok  group-name%E");
     int i;
     bool afterActive = false;
@@ -135,10 +136,10 @@ void TextWindow::ShowListOfGroups(void) {
             g->h.v, (&TextWindow::ScreenSelectGroup), s);
 
         if(active) afterActive = true;
-		if (SS.revisionUnlockKey && 1) afterActive = false;	//RT I like to see all group states
+		if (SS.revisionUnlockKey && REV1RT) afterActive = false;	//RT I like to see all group states
     }
 	//RT START
-	if (SS.revisionUnlockKey && 1){
+	if (SS.revisionUnlockKey && REV1RT){
 		if (SS.GW.activeGroup.v){
 			Group *g = SK.group.FindByIdNoOops(SS.GW.activeGroup);
 			if (g)
@@ -254,26 +255,51 @@ void TextWindow::ScreenChangeGroupName(int link, uint32_t v) {
 }
 void TextWindow::ScreenChangeGroupScale(int link, uint32_t v) {
     Group *g = SK.GetGroup(SS.TW.shown.group);
-
     char str[1024];
-    sprintf(str, "%.3f", g->scale);
-    SS.TW.ShowEditControl(14, 13, str);
-    SS.TW.edit.meaning = EDIT_GROUP_SCALE;
-    SS.TW.edit.group.v = v;
+    switch(link) {
+        case 'x':
+            sprintf(str, "%.3f", g->scaleImported.x );
+            SS.TW.ShowEditControl(16, 13, str);
+            SS.TW.edit.meaning = EDIT_GROUP_SCALE;
+            SS.pendingUserCommand=97701;
+            SS.TW.edit.group.v = v;
+            break;
+        case 'y':
+            sprintf(str, "%.3f", g->scaleImported.y );
+            SS.TW.ShowEditControl(18, 13, str);
+            SS.TW.edit.meaning = EDIT_GROUP_SCALE;
+            SS.pendingUserCommand=97702;
+            SS.TW.edit.group.v = v;
+            break;
+        case 'z':
+            sprintf(str, "%.3f", g->scaleImported.z );
+            SS.TW.ShowEditControl(20, 13, str);
+            SS.TW.edit.meaning = EDIT_GROUP_SCALE;
+            SS.pendingUserCommand=97703;
+            SS.TW.edit.group.v = v;
+            break;
+        case 'a':                                   //Set all same
+            sprintf(str, "%.3f", g->scaleImported.x);
+            SS.TW.ShowEditControl(14, 13, str);
+            SS.TW.edit.meaning = EDIT_GROUP_SCALE;
+            SS.pendingUserCommand=97700;
+            SS.TW.edit.group.v = v;
+    }
+
 }
 void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
-    SS.UndoRemember();
+	SS.UndoRemember();
 
-    hGroup hg = SS.TW.shown.group;
+	hGroup hg = SS.TW.shown.group;
 
-	if (SS.revisionUnlockKey && 0x1) {
-		/*	RT2014: disable the annoying condition for deleting active group. 
+	if (SS.revisionUnlockKey && REV1RT) {
+		/*	RT2014: disable the annoying condition for deleting active group.
 		It makes more sense to actually require the group to be active before deleting
 		therefore the logic of the following statement could be inverted			*/
 		/*However its just annoying, so just let the user delete the group
 		if (hg.v != SS.GW.activeGroup.v) {									//RT2014	Now you can only delete the currently active group
-			Error("Please activate the group before deleting.");
-			return;
+		Error("Please activate the group before deleting.");
+		return;
 		}
 		*/
 	}
@@ -284,11 +310,11 @@ void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
 			return;
 		}
 	}
-    SK.group.RemoveById(SS.TW.shown.group);
-    // This is a major change, so let's re-solve everything.
-    SS.TW.ClearSuper();
-    SS.GW.ClearSuper();
-    SS.GenerateAll(0, INT_MAX);
+	SK.group.RemoveById(SS.TW.shown.group);
+	// This is a major change, so let's re-solve everything.
+	SS.TW.ClearSuper();
+	SS.GW.ClearSuper();
+	SS.GenerateAll(0, INT_MAX);
 }
 
 //RT***************************************New routines to move to adequate locations*****************************************
@@ -296,24 +322,36 @@ int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT
 	//Overwrite the description with named descriptions. The psNewString is the return value to call as  &oldString
 //	static char ret[1024];		//RT Static because we return this string (?!)
 	if (c->type == Constraint::EQUAL_LENGTH_LINES){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		Request *reqB = SK.GetRequest(c->entityB.request());
- 		sprintf(*psNewString, "%s == %s", reqA->str.str, reqB->str.str);
+		Request *reqA = SK.GetRequest0(c->entityA.request());
+		Request *reqB = SK.GetRequest0(c->entityB.request());
+		if ((reqA) && (reqB))
+ 			sprintf(*psNewString, "%s == %s", reqA->str.str, reqB->str.str);
 		return 1;
 	}
 	else if ((Constraint::PT_PT_DISTANCE) == c->type){
-		try{
-			Request *reqA = SK.GetRequest(c->ptA.request());
-			Request *reqB = SK.GetRequest(c->ptB.request());
+		//try{
+		if (c->valA)	{		//Check if exists
+			sprintf(*psNewString, "     %s", SS.MmToString(c->valA));			//Return the reference value
+				return 1;
+		}
+			// Should never come here
+		Error("Should never come here 313");
+			Request *reqA = SK.GetRequest0(c->ptA.request());
+			if (!(reqA))	{		//Check if exists
+				sprintf(*psNewString, "     %s",   SS.MmToString(c->valA));		//Return the reference value
+				return 1;
+			}
+			Request *reqB = SK.GetRequest0(c->ptB.request());
+			if (!(reqB))
+				return -1;
 			Vector p0 = SK.GetEntity(c->ptA)->PointGetNum();
 			Vector p1 = SK.GetEntity(c->ptB)->PointGetNum();
 			sprintf(*psNewString, "%s == %s", reqA->str.str, SS.MmToString((p1.Minus(p0).Magnitude())));
 			return 1;
-		}
-		catch (int e)
-		{
-			return -1;	//Error has occoured
-		}
+			//	}
+			//	catch (char *e) {
+			//		Error("Problem PT_PT_DISTANCE: '%s'", e);
+			//	}
 	}
 	else if ((Constraint::ANGLE) == c->type){
 		try{
@@ -327,21 +365,18 @@ int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT
 			sprintf(*psNewString, "ang(%s, %s) = %.2f deg", reqA->str.str, reqB->str.str, theta * 180 / PI);
 			return 1;
 		}
-		catch (int e)
-		{
-			return -1;	//Error has occoured
-		}	}
-	else if ((Constraint::EQUAL_RADIUS) == c->type){
-		try{
-			Request *reqA = SK.GetRequest(c->entityA.request());
-			Request *reqB = SK.GetRequest(c->entityB.request());
-			sprintf(*psNewString, "(/)%s == (/)%s", reqA->str.str, reqB->str.str);
-			return 1;
+		catch (char *e) {
+			Error("Problem PT_PT_DISTANCE: '%s'", e);
 		}
-		catch (int e)
-		{
-			return -1;	//Error has occoured
-		}
+	}
+	else if ((Constraint::EQUAL_RADIUS) == c->type){		//RT1215 Revised
+		Entity *eA = SK.GetEntityNoOops(c->entityA);
+		if (eA == NULL) Request *eA = SK.GetRequest(c->entityA.request());
+		Entity *eB = SK.GetEntityNoOops(c->entityB);
+		if (eB == NULL) Request *eB = SK.GetRequest(c->entityB.request());
+		if ((eA)&&(eB))
+			sprintf(*psNewString, "diam(%s) == diam(%s)", eA->str.str, eB->str.str);
+		return 1;
 	}
 	else if ((Constraint::EQUAL_LINE_ARC_LEN) == c->type){
 		Request *reqA = SK.GetRequest(c->entityA.request());
@@ -360,11 +395,11 @@ int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT
 	else if ((Constraint::PT_ON_CIRCLE) == c->type){
 		Request *reqA = SK.GetRequest(c->entityA.request());
 		sprintf(*psNewString, "pt X %s", reqA->str.str );
-	}	
+	}
  	else if ((Constraint::HORIZONTAL) == c->type){
 		Request *reqA = SK.GetRequest(c->entityA.request());
 		sprintf(*psNewString, "%s Horiz ", reqA->str.str);
-	}	
+	}
 	else if ((Constraint::VERTICAL) == c->type){
 		Request *reqA = SK.GetRequest(c->entityA.request());
 		sprintf(*psNewString, "%s VERT", reqA->str.str);
@@ -374,7 +409,6 @@ int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT
 return 0;				//No change
 }
 //RT*****************************   END OF New code *******************************
-
 void TextWindow::ShowGroupInfo(void) {
     Group *g = SK.group.FindById(shown.group);
     const char *s = "???";
@@ -415,7 +449,7 @@ void TextWindow::ShowGroupInfo(void) {
         if(g->type == Group::ROTATE || g->type == Group::TRANSLATE) {
             if(g->subtype == Group::ONE_SIDED) {
                 bool skip = g->skipFirst;
-                Printf(false, 
+                Printf(false,
                    "%Bd   %Ftstart  %f%LK%Fd%c with original%E  "
                          "%f%Lk%Fd%c with copy #1%E",
                     &ScreenChangeGroupOption,
@@ -430,12 +464,16 @@ void TextWindow::ShowGroupInfo(void) {
                 times, times == 1 ? "" : "s",
                 g->h.v, &TextWindow::ScreenChangeExprA);
         }
-    } else if(g->type == Group::IMPORTED) {
+    } else if(g->type == Group::IMPORTED) {								//RT14126	set 3D scaling
         Printf(true, " %Ftimport geometry from file%E");
-        Printf(false, "%Ba   '%s'", g->impFileRel);
-        Printf(false, "%Bd   %Ftscaled by%E %# %Fl%Ll%f%D[change]%E",
-            g->scale,
-            &TextWindow::ScreenChangeGroupScale, g->h.v);
+		Printf(false, "%Ba   '%s'    %Fl%Ll%f%D[Edit]%E", g->impFileRel, &TextWindow::editImportFileNameRT, 0);
+        Printf(false, "%Bd   %Ftscaled by%E   %Fl%La%f%D[Uniform]%E",       &TextWindow::ScreenChangeGroupScale, g->h.v); //Make uniform scaling using x
+        Printf(false, "%Bd   %Ft      X%E %# %Fl%Lx%f%D[change]%E", g->scaleImported.x, &TextWindow::ScreenChangeGroupScale, g->h.v);
+        Printf(false, "%Bd   %Ft      Y%E %# %Fl%Ly%f%D[change]%E", g->scaleImported.y, &TextWindow::ScreenChangeGroupScale, g->h.v);
+        Printf(false, "%Bd   %Ft      Z%E %# %Fl%Lz%f%D[change]%E", g->scaleImported.z, &TextWindow::ScreenChangeGroupScale, g->h.v);
+
+
+        //    Printf(false, "%Bd   %Ftrotate%E    %@ degrees %Fl%Lr%f[change]%E",        shown.paste.theta*180/PI,        &ScreenChangePasteTransformed);
     } else if(g->type == Group::DRAWING_3D) {
         Printf(true, " %Ftsketch in 3d%E");
     } else if(g->type == Group::DRAWING_WORKPLANE) {
@@ -516,50 +554,49 @@ void TextWindow::ShowGroupInfo(void) {
     }
 
 list_items:
-    Printf(false, "");
-    Printf(false, "%Ft requests in group");
+	Printf(false, "");
+	Printf(false, "%Ft requests in group");
 
-    int i, a = 0;
-    for(i = 0; i < SK.request.n; i++) {
-        Request *r = &(SK.request.elem[i]);
+	int i, a = 0;
+	for (i = 0; i < SK.request.n; i++) {
+		Request *r = &(SK.request.elem[i]);
 
-        if(r->group.v == shown.group.v) {
-            char *s = r->DescriptionString();
+		if (r->group.v == shown.group.v) {
+			char *s = r->DescriptionString();
 			if (*r->str.str != '\0')				//RT: No name, do nothing
 			{
-				if (r->construction)			//RT: Overwrite some descriptions with named 
+				if (r->construction)			//RT: Overwrite some descriptions with named
 					sprintf(s, "%s  (Ref)", r->str.str);
 				else
 					sprintf(s, "%s", r->str.str);
 			}
-            Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
-                (a & 1) ? 'd' : 'a',
-                r->h.v, (&TextWindow::ScreenSelectRequest),
-                &(TextWindow::ScreenHoverRequest), s);
-            a++;
-        }
-    }
-    if(a == 0) Printf(false, "%Ba   (none)");
+			Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
+				(a & 1) ? 'd' : 'a',
+				r->h.v, (&TextWindow::ScreenSelectRequest),
+				&(TextWindow::ScreenHoverRequest), s);
+			a++;
+		}
+	}
+	if (a == 0) Printf(false, "%Ba   (none)");
 
-    a = 0;
-    Printf(false, "");
-    Printf(false, "%Ft constraints in group (%d DOF)", g->solved.dof);
-    for(i = 0; i < SK.constraint.n; i++) {
-        Constraint *c = &(SK.constraint.elem[i]);
-        if(c->group.v == shown.group.v) {
-            char *s = c->DescriptionString();
-			if (SS.revisionUnlockKey && 0x1)	txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
-            Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E %s",
-                (a & 1) ? 'd' : 'a',
-                c->h.v, (&TextWindow::ScreenSelectConstraint),
-                (&TextWindow::ScreenHoverConstraint), s,
-                c->reference ? "(ref)" : "");
-            a++;
-        }
-    }
-    if(a == 0) Printf(false, "%Ba   (none)");
+	a = 0;
+	Printf(false, "");
+	Printf(false, "%Ft constraints in group (%d DOF)", g->solved.dof);
+	for (i = 0; i < SK.constraint.n; i++) {
+		Constraint *c = &(SK.constraint.elem[i]);
+		if (c->group.v == shown.group.v) {
+			char *s = c->DescriptionString();
+			if (SS.revisionUnlockKey && REV1RT)	txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
+			Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E %s",
+				(a & 1) ? 'd' : 'a',
+				c->h.v, (&TextWindow::ScreenSelectConstraint),
+				(&TextWindow::ScreenHoverConstraint), s,
+				c->reference ? "(ref)" : "");
+			a++;
+		}
+	}
+	if (a == 0) Printf(false, "%Ba   (none)");
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -593,21 +630,21 @@ void TextWindow::ShowGroupSolveInfo(void) {
             return;
     }
 
-    for(int i = 0; i < g->solved.remove.n; i++) {
-        hConstraint hc = g->solved.remove.elem[i];
-        Constraint *c = SK.constraint.FindByIdNoOops(hc);
-        if(!c) continue;
+	for (int i = 0; i < g->solved.remove.n; i++) {
+		hConstraint hc = g->solved.remove.elem[i];
+		Constraint *c = SK.constraint.FindByIdNoOops(hc);
+		if (!c) continue;
 		char *s = c->DescriptionString();
-		if (SS.revisionUnlockKey && 0x1) TextWindow::txtConstraintNamesGet(c, &s); //RT Provide additional info about constraints
-        Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
-            (i & 1) ? 'd' : 'a',
-            c->h.v, (&TextWindow::ScreenSelectConstraint),
-            (&TextWindow::ScreenHoverConstraint),
-            s);
-    }
+		if (SS.revisionUnlockKey && REV1RT) TextWindow::txtConstraintNamesGet(c, &s); //RT Provide additional info about constraints
+		Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
+			(i & 1) ? 'd' : 'a',
+			c->h.v, (&TextWindow::ScreenSelectConstraint),
+			(&TextWindow::ScreenHoverConstraint),
+			s);
+	}
 
-    Printf(true,  "It may be possible to fix the problem ");
-    Printf(false, "by selecting Edit -> Undo.");
+	Printf(true, "It may be possible to fix the problem ");
+	Printf(false, "by selecting Edit -> Undo.");
 }
 
 //-----------------------------------------------------------------------------
@@ -791,9 +828,20 @@ void TextWindow::EditControlDone(const char *s) {
                     Error("Scale cannot be zero.");
                 } else {
                     Group *g = SK.GetGroup(edit.group);
-                    g->scale = ev;
+                    // g->scaleImp = ev; //RT old code:
+                    //RT Newcode
+                    if (SS.pendingUserCommand==97701)
+                      {g->scaleImported.x=ev;  }
+                    else if (SS.pendingUserCommand==97702)
+                      {g->scaleImported.y=ev;}
+                    else if (SS.pendingUserCommand==97703)
+                      {g->scaleImported.z=ev;}
+                    else                            //Set same scale
+                       {g->scaleImported.setSame(ev);}
+
                     SS.MarkGroupDirty(g->h);
                     SS.later.generateAll = true;
+                    SS.pendingUserCommand=0;                    //Reset the pending command
                 }
             }
             break;
@@ -874,3 +922,20 @@ void TextWindow::EditControlDone(const char *s) {
     }
 }
 
+//RT2014 Dec. New methods for the GUI
+
+void TextWindow::editImportFileNameRT(int link, uint32_t v) {	//RT: Let the user change the imported file
+	//Params: two dummies to conform with e.g.&TextWindow::ScreenEditTtfText, use 0,0
+	Group *g = SK.group.FindById(SS.GW.activeGroup);
+	if (g->type = Group::IMPORTED) {
+		if (!GetOpenFile(g->impFile, SLVS_EXT, SLVS_PATTERN)) return;
+		strcpy(g->impFileRel, g->impFile);					//Copy the full filename
+		MakePathRelative(SS.saveFile, g->impFileRel);		//Make the copy relative to current path
+		Message("New Relative Filename: %s", g->impFileRel);
+		SS.AfterNewFile();									//Regenerate all
+	}
+	else
+		Message("No imported file");
+	return;
+}
+//RT2014	end of new methods for GUI
