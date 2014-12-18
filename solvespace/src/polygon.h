@@ -243,6 +243,8 @@ public:
     void MakeFromCopyOf(SMesh *a);
     void MakeFromTransformationOf(SMesh *a,
                                     Vector trans, Quaternion q, double scale);
+    void MakeFromTransformationOf_3D(SMesh *a,
+                                      Vector trans, Quaternion q, Double3D scale3DVal);       //RT 3D Scaling version
     void MakeFromAssemblyOf(SMesh *a, SMesh *b);
 
     void MakeEdgesInPlaneInto(SEdgeList *sel, Vector n, double d);

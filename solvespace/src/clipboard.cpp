@@ -28,7 +28,7 @@ hEntity SolveSpace::Clipboard::NewEntityFor(hEntity he) {
 }
 //mv If the clipboard entity contains given point, then it returns 1.
 
-bool SolveSpace::Clipboard::ContainsEntityWithPoint(hEntity he) 
+bool SolveSpace::Clipboard::ContainsEntityWithPoint(hEntity he)
 {
 	hEntity hen = NewEntityFor(he);
 	if (hen.v) {
@@ -51,6 +51,7 @@ bool SolveSpace::Clipboard::ContainsEntity(hEntity he) {
 		}
 		return false;
 	}
+	return false;
 }
 
 void GraphicsWindow::DeleteSelection(void) {
@@ -278,7 +279,7 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         }
 		++requestCount;
     }
-    
+
     Constraint *c;
     for(c = SS.clipboard.c.First(); c; c = SS.clipboard.c.NextAfter(c)) {
         if(c->type == Constraint::POINTS_COINCIDENT) {
@@ -293,9 +294,9 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
                 Constraint::Constrain(c->type,
                                         Entity::NO_ENTITY,
                                         Entity::NO_ENTITY,
-                                        SS.clipboard.NewEntityFor(c->entityA));                                        
+                                        SS.clipboard.NewEntityFor(c->entityA));
             }
-        
+
             else {
                 Constraint::Constrain(c->type, SS.clipboard.NewEntityFor(c->ptA),
                                             SS.clipboard.NewEntityFor(c->ptB),
@@ -333,10 +334,10 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
 				c->valA);
 		}
 		if (c->type == Constraint::EQUAL_RADIUS /*&& requestCount == 1*/) {
-			if (!SS.copyConstraints) continue;	
+			if (!SS.copyConstraints) continue;
 			ConstrainSameSomething(c);
 		}
-		if (c->type == Constraint::EQUAL_LENGTH_LINES) {   //	6. Dangerous. Can make solvespace unresponsive.
+		if (c->type == Constraint::EQUAL_LENGTH_LINES) {   //eMVe6. Dangerous. Can make solvespace unresponsive.
 			if (!SS.copyConstraints) continue;
 			ConstrainSameSomething(c);
 		}
@@ -382,10 +383,10 @@ void GraphicsWindow::MenuClipboard(int id) {
     }
 
     switch(id) {
-        case MNU_PASTE: {   
+        case MNU_PASTE: {
             SS.UndoRemember();
-            Vector trans = SS.GW.projRight.ScaledBy(80/SS.GW.scale).Plus(
-                           SS.GW.projUp   .ScaledBy(40/SS.GW.scale));
+            Vector trans = SS.GW.projRight.ScaledBy(80/SS.GW.scaleWin).Plus(
+                           SS.GW.projUp   .ScaledBy(40/SS.GW.scaleWin));
             SS.GW.ClearSelection();
             SS.GW.PasteClipboard(trans, 0, 1);
             break;
@@ -396,7 +397,7 @@ void GraphicsWindow::MenuClipboard(int id) {
                 Error("Clipboard is empty; nothing to paste.");
                 break;
             }
-            
+
             Entity *wrkpl  = SK.GetEntity(SS.GW.ActiveWorkplane());
             Vector p = SK.GetEntity(wrkpl->point[0])->PointGetNum();
             SS.TW.shown.paste.times  = 1;
@@ -426,7 +427,7 @@ void GraphicsWindow::MenuClipboard(int id) {
             SS.GW.DeleteSelection();
             break;
 
-        default: ERRMSG_RT();
+        default: oops();
     }
 }
 

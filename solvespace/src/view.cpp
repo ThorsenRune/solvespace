@@ -11,7 +11,7 @@ void TextWindow::ShowEditView(void) {
 
     Printf(true,  "%Bd %Ftoverall scale factor%E");
     Printf(false, "%Ba   %# px/%s %Fl%Ll%f[edit]%E",
-        SS.GW.scale * SS.MmPerUnit(),
+        SS.GW.scaleWin * SS.MmPerUnit(),
         SS.UnitName(),
         &ScreenChangeViewScale);
     Printf(false, "");
@@ -39,7 +39,7 @@ void TextWindow::ShowEditView(void) {
 
 void TextWindow::ScreenChangeViewScale(int link, uint32_t v) {
     char buf[1024];
-    sprintf(buf, "%.3f", SS.GW.scale * SS.MmPerUnit());
+    sprintf(buf, "%.3f", SS.GW.scaleWin * SS.MmPerUnit());
 
     SS.TW.edit.meaning = EDIT_VIEW_SCALE;
     SS.TW.ShowEditControl(12, 3, buf);
@@ -70,7 +70,7 @@ bool TextWindow::EditControlDoneForView(const char *s) {
             if(e) {
                 double v =  e->Eval() / SS.MmPerUnit();
                 if(v > LENGTH_EPS) {
-                    SS.GW.scale = v;
+                    SS.GW.scaleWin = v;
                 } else {
                     Error("Scale cannot be zero or negative.");
                 }

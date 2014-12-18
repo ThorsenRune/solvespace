@@ -123,14 +123,14 @@ SSurface SSurface::FromPlane(Vector pt, Vector u, Vector v) {
     ret.degm = 1;
     ret.degn = 1;
 
-    ret.weight[0][0] = ret.weight[0][1] = 1; 
+    ret.weight[0][0] = ret.weight[0][1] = 1;
     ret.weight[1][0] = ret.weight[1][1] = 1;
 
     ret.ctrl[0][0] = pt;
     ret.ctrl[0][1] = pt.Plus(u);
     ret.ctrl[1][0] = pt.Plus(v);
     ret.ctrl[1][1] = pt.Plus(v).Plus(u);
-    
+
     return ret;
 }
 
@@ -178,7 +178,51 @@ SSurface SSurface::FromTransformationOf(SSurface *a,
 
     return ret;
 }
+//RT 3d implemenmntation
+SSurface SSurface::FromTransformationOf_3D(SSurface *a,
+                                        Vector t, Quaternion q, Double3D scale,
+                                        bool includingTrims)
+{
+    SSurface ret;
+    ZERO(&ret);
 
+    ret.h = a->h;
+    ret.color = a->color;
+    ret.face = a->face;
+
+    ret.degm = a->degm;
+    ret.degn = a->degn;
+    int i, j;
+    for(i = 0; i <= 3; i++) {
+        for(j = 0; j <= 3; j++) {
+            ret.ctrl[i][j] = a->ctrl[i][j];
+            ret.ctrl[i][j] = (ret.ctrl[i][j]).ScaledBy3D(scale);
+            ret.ctrl[i][j] = (q.Rotate(ret.ctrl[i][j])).Plus(t);
+
+            ret.weight[i][j] = a->weight[i][j];
+        }
+    }
+
+    if(includingTrims) {
+        STrimBy *stb;
+        for(stb = a->trim.First(); stb; stb = a->trim.NextAfter(stb)) {
+            STrimBy n = *stb;
+            n.start  = n.start.ScaledBy3D(scale);
+            n.finish = n.finish.ScaledBy3D(scale);
+            n.start  = (q.Rotate(n.start)) .Plus(t);
+            n.finish = (q.Rotate(n.finish)).Plus(t);
+            ret.trim.Add(&n);
+        }
+    }
+
+    if(scale.x < 0) {
+        // If we mirror every surface of a shell, then it will end up inside
+        // out. So fix that here.
+        ret.Reverse();
+    }
+
+    return ret;
+}
 void SSurface::GetAxisAlignedBounding(Vector *ptMax, Vector *ptMin) {
     *ptMax = Vector::From(VERY_NEGATIVE, VERY_NEGATIVE, VERY_NEGATIVE);
     *ptMin = Vector::From(VERY_POSITIVE, VERY_POSITIVE, VERY_POSITIVE);
@@ -413,7 +457,7 @@ void SSurface::TriangulateInto(SShell *shell, SMesh *sm) {
     if(el.AssemblePolygon(&poly, NULL, true)) {
         int i, start = sm->l.n;
         if(degm == 1 && degn == 1) {
-            // A surface with curvature along one direction only; so 
+            // A surface with curvature along one direction only; so
             // choose the triangulation with chords that lie as much
             // as possible within the surface. And since the trim curves
             // have been pwl'd to within the desired chord tol, that will
@@ -522,7 +566,7 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1,
     s1.color = color;
     hSSurface hs0 = surface.AddAndAssignId(&s0),
               hs1 = surface.AddAndAssignId(&s1);
-    
+
     // Now go through the input curves. For each one, generate its surface
     // of extrusion, its two translated trim curves, and one trim line. We
     // go through by loops so that we can assign the lines correctly.
@@ -653,7 +697,7 @@ void SShell::MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
         for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
             Revolved revs;
             for(j = 0; j < 4; j++) {
-                if(sb->deg == 1 && 
+                if(sb->deg == 1 &&
                     (sb->ctrl[0]).DistanceToLine(pt, axis) < LENGTH_EPS &&
                     (sb->ctrl[1]).DistanceToLine(pt, axis) < LENGTH_EPS)
                 {
@@ -705,7 +749,7 @@ void SShell::MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
 
                 // And if this input curve and the one after it both generated
                 // surfaces, then trim both of those by the appropriate
-                // circle. 
+                // circle.
                 if(revs.d[j].v && revsp.d[j].v) {
                     SSurface *ss = surface.FindById(revs.d[j]);
 
@@ -838,7 +882,25 @@ void SShell::MakeFromTransformationOf(SShell *a,
         curve.Add(&n); // keeping the old ID
     }
 }
+void SShell::MakeFromTransformationOf_3D(SShell *a,
+                                      Vector t, Quaternion q, Double3D scale)     //RT modified to 3d scaling
+{
+    booleanFailed = false;
 
+    SSurface *s;
+    for(s = a->surface.First(); s; s = a->surface.NextAfter(s)) {
+        SSurface n;
+        n = SSurface::FromTransformationOf_3D(s, t, q, scale, true);
+        surface.Add(&n); // keeping the old ID
+    }
+
+    SCurve *c;
+    for(c = a->curve.First(); c; c = a->curve.NextAfter(c)) {
+        SCurve n;
+        n = SCurve::FromTransformationOf_3D(c, t, q, scale);
+        curve.Add(&n); // keeping the old ID
+    }
+}
 void SShell::MakeEdgesInto(SEdgeList *sel) {
     SSurface *s;
     for(s = surface.First(); s; s = surface.NextAfter(s)) {

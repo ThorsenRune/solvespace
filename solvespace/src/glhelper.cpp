@@ -25,12 +25,12 @@ double ssglStrWidth(const char *str, double h)
 
         w += Font[c].width;
     }
-    return w*FONT_SCALE(h)/SS.GW.scale;
+    return w*FONT_SCALE(h)/SS.GW.scaleWin;
 }
 double ssglStrHeight(double h)
 {
     // The characters have height ~22, as they appear in the table.
-    return 22.0*FONT_SCALE(h)/SS.GW.scale;
+    return 22.0*FONT_SCALE(h)/SS.GW.scaleWin;
 }
 void ssglWriteTextRefCenter(const char *str, double h, Vector t, Vector u, Vector v,
                             ssglLineFn *fn, void *fndata)
@@ -38,7 +38,7 @@ void ssglWriteTextRefCenter(const char *str, double h, Vector t, Vector u, Vecto
     u = u.WithMagnitude(1);
     v = v.WithMagnitude(1);
 
-    double scale = FONT_SCALE(h)/SS.GW.scale;
+    double scale = FONT_SCALE(h)/SS.GW.scaleWin;
     double fh = ssglStrHeight(h);
     double fw = ssglStrWidth(str, h);
 
@@ -68,10 +68,10 @@ void ssglWriteText(const char *str, double h, Vector t, Vector u, Vector v,
     u = u.WithMagnitude(1);
     v = v.WithMagnitude(1);
 
-    double scale = FONT_SCALE(h)/SS.GW.scale;
+    double scale = FONT_SCALE(h)/SS.GW.scaleWin;
     int xo = 5;
     int yo = 5;
-    
+
     for(; *str; str++) {
         int c = *str;
         if(c < 32 || c > 126) c = 32;
@@ -293,7 +293,7 @@ void ssglFillMesh(RgbColor specColor, SMesh *m, uint32_t h, uint32_t s1, uint32_
             ssglVertex3v(tr->c);
         }
 
-        if((s1 != 0 && tr->meta.face == s1) || 
+        if((s1 != 0 && tr->meta.face == s1) ||
            (s2 != 0 && tr->meta.face == s2))
         {
             StippleTriangle(tr, true, rgbSelected);
@@ -447,8 +447,8 @@ void ssglMarkPolygonNormal(SPolygon *p)
     tail = tail.ScaledBy(1.0/cnt);
 
     Vector gn = SS.GW.projRight.Cross(SS.GW.projUp);
-    Vector tip = tail.Plus((p->normal).WithMagnitude(40/SS.GW.scale));
-    Vector arrow = (p->normal).WithMagnitude(15/SS.GW.scale);
+    Vector tip = tail.Plus((p->normal).WithMagnitude(40/SS.GW.scaleWin));
+    Vector arrow = (p->normal).WithMagnitude(15/SS.GW.scaleWin);
 
     glColor3d(1, 1, 0);
     glBegin(GL_LINES);

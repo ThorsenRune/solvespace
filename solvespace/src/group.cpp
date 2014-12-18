@@ -47,17 +47,18 @@ void Group::AddParam(IdList<Param,hParam> *param, hParam hp, double v) {
 
 bool Group::IsVisible(void) {
     if(!visible) return false;
-    if(SS.GroupsInOrder(SS.GW.activeGroup, h)) 
+    if(SS.GroupsInOrder(SS.GW.activeGroup, h))
 		return false;
     return true;
 }
 
-void Group::MenuGroup(int id) {
+void Group::MenuGroup(int id) {		//RTc:Create a new group: workplane/extrude../import
     Group g;
     ZERO(&g);
     g.visible = true;
     g.color = RGBi(100, 100, 100);
-    g.scale = 1;
+    g.scaleImp = 1;
+    g.scaleImported.setSame(1.0);
 
     if(id >= RECENT_IMPORT && id < (RECENT_IMPORT + MAX_RECENT)) {
         strcpy(g.impFile, RecentFile[id-RECENT_IMPORT]);
@@ -75,7 +76,7 @@ void Group::MenuGroup(int id) {
         case GraphicsWindow::MNU_GROUP_WRKPL:
             g.type = DRAWING_WORKPLANE;
             g.name.strcpy("sketch-in-plane");
-            if(gs.points == 1 && gs.n == 1) {
+            if(gs.points == 1 && gs.n == 1) {		//RTc:Create new workplanes
                 g.subtype = WORKPLANE_BY_POINT_ORTHO;
 
                 Vector u = SS.GW.projRight, v = SS.GW.projUp;
@@ -261,7 +262,7 @@ void Group::TransformImportedBy(Vector t, Quaternion q) {
 
     Quaternion qg = Quaternion::From(qw, qx, qy, qz);
     qg = q.Times(qg);
-    
+
     Vector tg = Vector::From(tx, ty, tz);
     tg = tg.Plus(t);
 
@@ -302,8 +303,8 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
     Vector gn = (SS.GW.projRight).Cross(SS.GW.projUp);
     Vector gp = SS.GW.projRight.Plus(SS.GW.projUp);
     Vector gc = (SS.GW.offset).ScaledBy(-1);
-    gn = gn.WithMagnitude(200/SS.GW.scale);
-    gp = gp.WithMagnitude(200/SS.GW.scale);
+    gn = gn.WithMagnitude(200/SS.GW.scaleWin);
+    gp = gp.WithMagnitude(200/SS.GW.scaleWin);
     int a, i;
     switch(type) {
         case DRAWING_3D:
@@ -468,7 +469,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             AddParam(param, h.param(4), 0);
             AddParam(param, h.param(5), 0);
             AddParam(param, h.param(6), 0);
-            
+
             for(i = 0; i < impEntity.n; i++) {
                 Entity *ie = &(impEntity.elem[i]);
                 CopyEntity(entity, ie, 0, 0,
@@ -678,7 +679,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                 en.param[5] = qvy;
                 en.param[6] = qvz;
             }
-            en.numPoint = (ep->actPoint).ScaledBy(scale);
+            en.numPoint = (ep->actPoint).ScaledBy3D(scaleImported);          //Scale the outline of the object
             break;
 
         case Entity::NORMAL_N_COPY:
@@ -700,7 +701,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                 en.param[3] = qvz;
             }
             en.numNormal = ep->actNormal;
-            if(scale < 0) en.numNormal = en.numNormal.Mirror();
+            if(scaleImported.x < 0) en.numNormal = en.numNormal.Mirror();
 
             en.point[0] = Remap(ep->point[0], remap);
             break;
@@ -708,7 +709,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
         case Entity::DISTANCE_N_COPY:
         case Entity::DISTANCE:
             en.type = Entity::DISTANCE_N_COPY;
-            en.numDistance = ep->actDistance*fabs(scale);
+            en.numDistance = ep->actDistance*fabs(scaleImp);
             break;
 
         case Entity::FACE_NORMAL_PT:
@@ -735,8 +736,8 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                 en.param[5] = qvy;
                 en.param[6] = qvz;
             }
-            en.numPoint  = (ep->actPoint).ScaledBy(scale);
-            en.numNormal = (ep->actNormal).ScaledBy(scale);
+            en.numPoint  = (ep->actPoint).ScaledBy3D(scaleImported);
+            en.numNormal = (ep->actNormal).ScaledBy(scaleImported.x);
             break;
 
         default: {
@@ -755,7 +756,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
 
     // If the entity came from an imported file where it was invisible then
     // ep->actiVisble will be false, and we should hide it. Or if the entity
-    // came from a copy (e.g. step and repeat) of a force-hidden imported 
+    // came from a copy (e.g. step and repeat) of a force-hidden imported
     // entity, then we also want to hide it.
     en.forceHidden = (!ep->actVisible) || ep->forceHidden;
 

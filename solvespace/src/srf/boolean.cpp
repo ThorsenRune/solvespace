@@ -700,6 +700,7 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
     }
 
     // Likewise copy over all the surfaces.
+	int countErrorsRT = 0;
     SSurface *s, sn;
     for(i = 0; i < 2; i++) {
         ab = (i == 0) ? a : b;
@@ -708,13 +709,31 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
             // All the trim curve IDs get rewritten; we know the new handles
             // to the curves since we recorded them in the previous step.
             STrimBy *stb;
-            for(stb = sn.trim.First(); stb; stb = sn.trim.NextAfter(stb)) {
-                stb->curve = ab->curve.FindById(stb->curve)->newH;
-            }
+			if (SS.revisionUnlockKey && REV1RT){	//RT: Decomposing the original statement catching errors
+				for (stb = sn.trim.First(); stb; stb = sn.trim.NextAfter(stb)) {//RT the primitive solution is just to skip missing surfaces
+					if (!(stb)) {
+						countErrorsRT++;
+						continue;		//Error not existing element
+					}
+					SCurve  *tempvar = ab->curve.FindByIdNoOops(stb->curve);		//Will return null if not found
+					if (!(tempvar)){
+						countErrorsRT++;
+						continue;			//Error non existing curve
+					}
+					stb->curve = tempvar->newH;
+				}
+			}
+			else        //RT: Original code. Would crash if curves are missing in source file
+			{
+				for (stb = sn.trim.First(); stb; stb = sn.trim.NextAfter(stb)) {		
+					stb->curve = ab->curve.FindById(stb->curve)->newH;
+				}
+			}
             s->newH = surface.AddAndAssignId(&sn);
         }
     }
-
+	if (countErrorsRT > 0) 
+		Message("%d Missing surfaces found and ignored", countErrorsRT);
     // Finally, rewrite the surfaces associated with each curve to use the
     // new handles.
     RewriteSurfaceHandlesForCurves(a, b);

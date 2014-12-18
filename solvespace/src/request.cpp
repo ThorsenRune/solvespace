@@ -81,6 +81,15 @@ int EntReqTable::GetRequestForEntity(int ent) {
     return req;
 }
 
+Request* Request::getRequestByName(char* reqNameStr){
+	for (int j = 0; j < SK.request.n; j++) {
+		Request *r = &(SK.request.elem[j]);
+		if (0 == (strcmp(r->str.str, reqNameStr))) {				//Found first matching string
+			return r;
+		}
+	}
+	return nullptr;	//NO request found
+}
 
 void Request::Generate(IdList<Entity,hEntity> *entity,
                        IdList<Param,hParam> *param)
@@ -103,8 +112,8 @@ void Request::Generate(IdList<Entity,hEntity> *entity,
     e.style = style;
     e.workplane = workplane;
     e.construction = construction;
-	e.str.strcpy(str.str); 
-
+	e.str.strcpy(str.str);							//RT copy the request name as the entity name
+	e.parentRequestID = h.v;						//RT Remember what requestID generated this entity
     e.font.strcpy(font.str);
     e.h = h.entity(0);				//Get the handle ID 
 
@@ -190,7 +199,7 @@ char *Request::DescriptionString(void) {
     return ret;
 }
 
-hParam Request::AddParam(IdList<Param,hParam> *param, hParam hp) {
+hParam Request::AddParam(IdList<Param,hParam> *param, hParam hp) {//Pack 32bit id as [request id , parameter number]
     Param pa;
     memset(&pa, 0, sizeof(pa));
     pa.h = hp;

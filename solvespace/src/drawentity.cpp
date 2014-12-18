@@ -29,9 +29,9 @@ void Entity::LineDrawOrGetDistance(Vector a, Vector b, bool maybeFat) {
                 ssglVertex3v(b);
             glEnd();
         } else {
-            ssglFatLine(a, b, dogd.lineWidth/SS.GW.scale);
+            ssglFatLine(a, b, dogd.lineWidth/SS.GW.scaleWin);
         }
-            
+
         ssglDepthRangeOffset(0);
     } else {
         Point2d ap = SS.GW.ProjectPoint(a);
@@ -51,7 +51,7 @@ void Entity::DrawAll(void) {
     // stuff to gl.
     int i;
     if(SS.GW.showPoints) {
-        double s = 3.5/SS.GW.scale;
+        double s = 3.5/SS.GW.scaleWin;
         Vector r = SS.GW.projRight.ScaledBy(s);
         Vector d = SS.GW.projUp.ScaledBy(s);
         ssglColorRGB(Style::Color(Style::DATUM));
@@ -150,7 +150,7 @@ double Entity::GetDistance(Point2d mp) {
     dogd.dmin = 1e12;
 
     DrawOrGetDistance();
-    
+
     return dogd.dmin;
 }
 
@@ -236,7 +236,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) {
     int pts = periodic ? 4 + ep : 2 + ep;
 
     int i, j, a;
-    
+
     // The starting and finishing control points that define our end tangents
     // (if the spline isn't periodic), and the on-curve points.
     Vector ctrl_s = Vector::From(0, 0, 0);
@@ -269,7 +269,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) {
         BandedMatrix bm;
         ZERO(&bm);
         bm.n = n;
-   
+
         for(i = 0; i < n; i++) {
             int im, it, ip;
             if(periodic) {
@@ -318,7 +318,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) {
             } else {
                 // The wrapping would work, except when n = 1 and everything
                 // wraps to zero...
-                if(i > 0)     bm.A[i][i - 1] = eq.x; 
+                if(i > 0)     bm.A[i][i - 1] = eq.x;
                               bm.A[i][i]     = eq.y;
                 if(i < (n-1)) bm.A[i][i + 1] = eq.z;
             }
@@ -441,7 +441,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) {
             }
             break;
         }
-            
+
         case TTF_TEXT: {
             Vector topLeft = SK.GetEntity(point[0])->PointGetNum();
             Vector botLeft = SK.GetEntity(point[1])->PointGetNum();
@@ -481,8 +481,8 @@ void Entity::DrawOrGetDistance(void) {
 
             if(dogd.drawing) {
                 double s = 3.5;
-                Vector r = SS.GW.projRight.ScaledBy(s/SS.GW.scale);
-                Vector d = SS.GW.projUp.ScaledBy(s/SS.GW.scale);
+                Vector r = SS.GW.projRight.ScaledBy(s/SS.GW.scaleWin);
+                Vector d = SS.GW.projUp.ScaledBy(s/SS.GW.scaleWin);
 
                 ssglColorRGB(Style::Color(Style::DATUM));
                 ssglDepthRangeOffset(6);
@@ -539,7 +539,7 @@ void Entity::DrawOrGetDistance(void) {
                     // Draw an extra copy of the x, y, and z axes, that's
                     // always in the corner of the view and at the front.
                     // So those are always available, perhaps useful.
-                    double s = SS.GW.scale;
+                    double s = SS.GW.scaleWin;
                     double h = 60 - SS.GW.height/2;
                     double w = 60 - SS.GW.width/2;
                     tail = SS.GW.projRight.ScaledBy(w/s).Plus(
@@ -548,11 +548,11 @@ void Entity::DrawOrGetDistance(void) {
                     glLineWidth(2);
                 }
 
-                Vector v = (q.RotationN()).WithMagnitude(50/SS.GW.scale);
+                Vector v = (q.RotationN()).WithMagnitude(50/SS.GW.scaleWin);
                 Vector tip = tail.Plus(v);
                 LineDrawOrGetDistance(tail, tip);
 
-                v = v.WithMagnitude(12/SS.GW.scale);
+                v = v.WithMagnitude(12/SS.GW.scaleWin);
                 Vector axis = q.RotationV();
                 LineDrawOrGetDistance(tip,tip.Minus(v.RotatedAbout(axis, 0.6)));
                 LineDrawOrGetDistance(tip,tip.Minus(v.RotatedAbout(axis,-0.6)));
@@ -573,7 +573,7 @@ void Entity::DrawOrGetDistance(void) {
             Vector u = Normal()->NormalU();
             Vector v = Normal()->NormalV();
 
-            double s = (min(SS.GW.width, SS.GW.height))*0.45/SS.GW.scale;
+            double s = (min(SS.GW.width, SS.GW.height))*0.45/SS.GW.scaleWin;
 
             Vector us = u.ScaledBy(s);
             Vector vs = v.ScaledBy(s);
@@ -588,8 +588,8 @@ void Entity::DrawOrGetDistance(void) {
             glEnable(GL_LINE_STIPPLE);
             glLineStipple(3, 0x1111);
             if(!h.isFromRequest()) {
-                mm = mm.Plus(v.ScaledBy(60/SS.GW.scale));
-                mm2 = mm2.Plus(u.ScaledBy(60/SS.GW.scale));
+                mm = mm.Plus(v.ScaledBy(60/SS.GW.scaleWin));
+                mm2 = mm2.Plus(u.ScaledBy(60/SS.GW.scaleWin));
                 LineDrawOrGetDistance(mm2, mm);
             }
             LineDrawOrGetDistance(pp, pm);

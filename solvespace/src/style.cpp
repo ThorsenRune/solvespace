@@ -255,7 +255,7 @@ float Style::Width(hStyle h) {
     double r = 1.0;
     Style *s = Get(h);
     if(s->widthAs == UNITS_AS_MM) {
-        r = s->width * SS.GW.scale;
+        r = s->width * SS.GW.scaleWin;
     } else if(s->widthAs == UNITS_AS_PIXELS) {
         r = s->width;
     }
@@ -268,7 +268,7 @@ float Style::Width(hStyle h) {
 //-----------------------------------------------------------------------------
 double Style::WidthMm(int hs) {
     double widthpx = Width(hs);
-    return widthpx / SS.GW.scale;
+    return widthpx / SS.GW.scaleWin;
 }
 
 //-----------------------------------------------------------------------------
@@ -277,7 +277,7 @@ double Style::WidthMm(int hs) {
 double Style::TextHeight(hStyle hs) {
     Style *s = Get(hs);
     if(s->textHeightAs == UNITS_AS_MM) {
-        return s->textHeight * SS.GW.scale;
+        return s->textHeight * SS.GW.scaleWin;
     } else if(s->textHeightAs == UNITS_AS_PIXELS) {
         return s->textHeight;
     } else {
@@ -399,7 +399,7 @@ void TextWindow::ScreenBackgroundImage(int link, uint32_t v) {
 
         png_read_png(png_ptr, info_ptr,
             PNG_TRANSFORM_EXPAND | PNG_TRANSFORM_STRIP_ALPHA, NULL);
-        
+
         int w; w = (int)png_get_image_width(png_ptr, info_ptr);
         int h; h = (int)png_get_image_height(png_ptr, info_ptr);
         uint8_t **rows; rows = png_get_rows(png_ptr, info_ptr);
@@ -417,7 +417,7 @@ void TextWindow::ScreenBackgroundImage(int link, uint32_t v) {
         SS.bgImage.h      = h;
         SS.bgImage.rw     = rw;
         SS.bgImage.rh     = rh;
-        SS.bgImage.scale  = SS.GW.scale;
+        SS.bgImage.scale  = SS.GW.scaleWin;
         SS.bgImage.origin = SS.GW.offset.ScaledBy(-1);
 
 err:
@@ -450,7 +450,7 @@ void TextWindow::ShowListOfStyles(void) {
         darkbg = !darkbg;
     }
 
-    Printf(true, "  %Fl%Ll%fcreate a new custom style%E", 
+    Printf(true, "  %Fl%Ll%fcreate a new custom style%E",
         &ScreenCreateCustomStyle);
 
     Printf(false, "");
@@ -491,7 +491,7 @@ void TextWindow::ScreenChangeStyleName(int link, uint32_t v) {
     Style *s = Style::Get(hs);
     SS.TW.ShowEditControl(10, 12, s->name.str);
     SS.TW.edit.style = hs;
-    SS.TW.edit.meaning = EDIT_STYLE_NAME;   
+    SS.TW.edit.meaning = EDIT_STYLE_NAME;
 }
 
 void TextWindow::ScreenDeleteStyle(int link, uint32_t v) {
@@ -559,7 +559,7 @@ void TextWindow::ScreenChangeStyleColor(int link, uint32_t v) {
         em = EDIT_STYLE_FILL_COLOR;
         rgb = s->fillColor;
     } else {
-        ERRMSG_RT();
+        oops();
     }
     SS.TW.ShowEditControlWithColorPicker(row, col, rgb);
     SS.TW.edit.style = hs;
@@ -575,13 +575,13 @@ void TextWindow::ScreenChangeStyleYesNo(int link, uint32_t v) {
         case 'w':
             if(s->widthAs != Style::UNITS_AS_MM) {
                 s->widthAs = Style::UNITS_AS_MM;
-                s->width /= SS.GW.scale;
+                s->width /= SS.GW.scaleWin;
             }
             break;
         case 'W':
             if(s->widthAs != Style::UNITS_AS_PIXELS) {
                 s->widthAs = Style::UNITS_AS_PIXELS;
-                s->width *= SS.GW.scale;
+                s->width *= SS.GW.scaleWin;
             }
             break;
 
@@ -589,14 +589,14 @@ void TextWindow::ScreenChangeStyleYesNo(int link, uint32_t v) {
         case 'g':
             if(s->textHeightAs != Style::UNITS_AS_MM) {
                 s->textHeightAs = Style::UNITS_AS_MM;
-                s->textHeight /= SS.GW.scale;
+                s->textHeight /= SS.GW.scaleWin;
             }
             break;
 
         case 'G':
             if(s->textHeightAs != Style::UNITS_AS_PIXELS) {
                 s->textHeightAs = Style::UNITS_AS_PIXELS;
-                s->textHeight *= SS.GW.scale;
+                s->textHeight *= SS.GW.scaleWin;
             }
             break;
 

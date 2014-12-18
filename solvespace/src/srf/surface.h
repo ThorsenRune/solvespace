@@ -201,8 +201,10 @@ public:
     hSSurface       surfA;
     hSSurface       surfB;
 
-    static SCurve FromTransformationOf(SCurve *a, Vector t, Quaternion q, 
+    static SCurve FromTransformationOf(SCurve *a, Vector t, Quaternion q,
                                         double scale);
+    static SCurve FromTransformationOf_3D(SCurve *a, Vector t, Quaternion q,
+                                        Double3D scale);                          //RT 3d scaling
     SCurve MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
                                 SSurface *srfA, SSurface *srfB);
     void RemoveShortSegments(SSurface *srfA, SSurface *srfB);
@@ -274,6 +276,9 @@ public:
     static SSurface FromTransformationOf(SSurface *a, Vector t, Quaternion q,
                                          double scale,
                                          bool includingTrims);
+    static SSurface FromTransformationOf_3D(SSurface *a, Vector t, Quaternion q,
+                                         Double3D scale,
+                                         bool includingTrims);                          //RT 3D scaling
     void ScaleSelfBy(double s);
 
     void EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
@@ -285,7 +290,7 @@ public:
     SSurface MakeCopyTrimAgainst(SShell *parent, SShell *a, SShell *b,
                                     SShell *into, int type);
     void TrimFromEdgeList(SEdgeList *el, bool asUv);
-    void IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB, 
+    void IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                           SShell *into);
     void AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
                           SShell *agnstA, SShell *agnstB, SShell *into);
@@ -398,12 +403,14 @@ public:
     int ClassifyRegion(Vector edge_n, Vector inter_surf_n, Vector edge_surf_n);
     bool ClassifyEdge(int *indir, int *outdir,
                       Vector ea, Vector eb,
-                      Vector p, 
+                      Vector p,
                       Vector edge_n_in, Vector edge_n_out, Vector surf_n);
 
     void MakeFromCopyOf(SShell *a);
     void MakeFromTransformationOf(SShell *a,
                                     Vector trans, Quaternion q, double scale);
+    void MakeFromTransformationOf_3D(SShell *a,
+                                    Vector trans, Quaternion q, Double3D scale);      //RT
     void MakeFromAssemblyOf(SShell *a, SShell *b);
     void MergeCoincidentSurfaces(void);
 
