@@ -100,19 +100,20 @@ public:
         ROTATE                        = 5200,
         TRANSLATE                     = 5201,
         IMPORTED                      = 5300
-    };
+    };	//Used by group type
     int type;
 
     int order;
 
     hGroup      opA;
     hGroup      opB;
-    bool        visible;		//RT Are the object in the group visible
+    bool        visible;		//RTc Are the object in the group visible
+    bool        hideConstraints;        //RT1218 show/hide constraints for each group
     bool        suppress;
     bool        relaxConstraints;
     bool        allDimsReference;
-    double      scale;
-
+    double      scaleImp;
+    Double3D    scaleImported;            //RTc: scale imported geometry
     bool        clean;
     hEntity     activeWorkplane;
     double      valA;
@@ -133,7 +134,7 @@ public:
         // For extrudes, translates, and rotates
         ONE_SIDED                  = 7000,
         TWO_SIDED                  = 7001
-    };
+    };	//used by subtype
     int subtype;
 
     bool skipFirst; // for step and repeat ops
@@ -146,7 +147,7 @@ public:
         bool        swapUV;
         bool        negateU;
         bool        negateV;
-    } predef;
+    } predef;	//Define origin of a group as a quarternion and a origin
 
     SPolygon                polyLoops;
     SBezierLoopSetSet       bezierLoops;
@@ -278,18 +279,18 @@ public:
 
     int         type;
     int         extraPoints;
-
+				//RTc: the workplane for the request to use
     hEntity     workplane; // or Entity::FREE_IN_3D
-    hGroup      group;
+    hGroup      group;		//RTc the group to which the request belongs
     hStyle      style;
 
     bool        construction;
     NameStr     str;
     NameStr     font;
-    
+
     static hParam AddParam(ParamList *param, hParam hp);
     void Generate(EntityList *entity, ParamList *param);
-
+	static Request* Request::getRequestByName(char* reqNameStr);			//RT new function to get the request by its given string (name)
     char *DescriptionString(void);
 
     void Clear(void) {}
@@ -300,7 +301,7 @@ class EntityBase {
 public:
     int         tag;
     hEntity     h;
-
+	uint32_t	parentRequestID;					//RT new parameter linking to the generating request (might be useful) set in Generate
     static const hEntity    FREE_IN_3D;
     static const hEntity    NO_ENTITY;
 
@@ -640,6 +641,7 @@ public:
     void DrawOrGetDistance(Vector *labelPos);
     double EllipticalInterpolation(double rx, double ry, double theta);
     char *Label(void);
+	char *Label1(void);					//RT1217 Substituting Label rewriting constraints with name. Refs are denoted by ()
     void DoArcForAngle(Vector a0, Vector da, Vector b0, Vector db,
                         Vector offset, Vector *ref);
     void DoLineWithArrows(Vector ref, Vector a, Vector b, bool onlyOneExt);
@@ -797,7 +799,7 @@ inline hParam hRequest::param(int i)
 
 inline bool hEntity::isFromRequest(void)
     { if(v & 0x80000000) return false; else return true; }
-inline hRequest hEntity::request(void)
+inline hRequest hEntity::request(void)	//Return the req.id for the entity
     { hRequest r; r.v = (v >> 16); return r; }
 inline hGroup hEntity::group(void)
     { hGroup r; r.v = (v >> 16) & 0x3fff; return r; }

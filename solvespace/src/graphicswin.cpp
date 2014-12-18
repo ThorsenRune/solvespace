@@ -24,71 +24,81 @@
 #define PGUP    PGUP_KEY
 #define PGDN	PGDWN_KEY
 const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
-//level
-//   label                          id                  accel   fn
-{ 0, "&File",                       0,                  0,      NULL  },
-{ 1, "&New",                        MNU_NEW,            C|'N',  mFile },
-{ 1, "&Open...",                    MNU_OPEN,           C|'O',  mFile },
-{ 1, "Open &Recent",                MNU_OPEN_RECENT,    0,      mFile },
-{ 1, "&Save",                       MNU_SAVE,           C|'S',  mFile },
-{ 1, "Save &As...",                 MNU_SAVE_AS,        0,      mFile },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "&Export Again...",			MNU_EXPORT_AGAIN,	0,		mFile },	//RT Repeat last export
-{ 1, "Export &Image...",            MNU_EXPORT_PNG,     0,      mFile },
-{ 1, "Export 2d &View...",          MNU_EXPORT_VIEW,    0,      mFile },
-{ 1, "Export 2d &Section...",       MNU_EXPORT_SECTION, 0,      mFile },
-{ 1, "Export 3d &Wireframe...",     MNU_EXPORT_WIREFRAME, 0,    mFile },
-{ 1, "Export Triangle &Mesh...",    MNU_EXPORT_MESH,    0,      mFile },
-{ 1, "Export &Surfaces...",         MNU_EXPORT_SURFACES,0,      mFile },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "E&xit",                       MNU_EXIT,           C|'Q',  mFile },
+	//level
+	//   label                          id                  accel   fn
+	{ 0, "&File", 0, 0, NULL },
+	{ 1, "&New", MNU_NEW, C | 'N', mFile },
+	{ 1, "&Open...", MNU_OPEN, C | 'O', mFile },
+	{ 1, "Open &Recent", MNU_OPEN_RECENT, 0, mFile },
+	{ 1, "&Save", MNU_SAVE, C | 'S', mFile },
+	{ 1, "Save &As...", MNU_SAVE_AS, 0, mFile },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "&Export Again...", MNU_EXPORT_AGAIN, 0, mFile },	//RT Repeat last export
+	{ 1, "Export &Image...", MNU_EXPORT_PNG, 0, mFile },
+	{ 1, "Export 2d &View...", MNU_EXPORT_VIEW, 0, mFile },
+	{ 1, "Export 2d &Section...", MNU_EXPORT_SECTION, 0, mFile },
+	{ 1, "Export 3d &Wireframe...", MNU_EXPORT_WIREFRAME, 0, mFile },
+	{ 1, "Export Triangle &Mesh...", MNU_EXPORT_MESH, 0, mFile },
+	{ 1, "Export &Surfaces...", MNU_EXPORT_SURFACES, 0, mFile },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "E&xit", MNU_EXIT, C | 'Q', mFile },
 
-{ 0, "&Edit",                       0,                  0,      NULL  },
-{ 1, "&Undo",                       MNU_UNDO,           C|'Z',  mEdit },
-{ 1, "&Redo",                       MNU_REDO,           C|'Y',  mEdit },
-{ 1, "Re&generate All",             MNU_REGEN_ALL,      ' ',    mEdit },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "Snap Selection to &Grid",     MNU_SNAP_TO_GRID,   '.',    mEdit },
-{ 1, "Rotate Imported &90\260",     MNU_ROTATE_90,      '9',    mEdit },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "Cu&t",                        MNU_CUT,            C|'X',  mClip },
-{ 1, "&Copy",                       MNU_COPY,           C|'C',  mClip },
-{ 1, "&Paste",                      MNU_PASTE,          C|'V',  mClip },
-{ 1, "Paste &Transformed...",       MNU_PASTE_TRANSFORM,C|'T',  mClip },
-{ 1, "&Delete",                     MNU_DELETE,         DEL,    mClip },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "Select &Edge Chain",          MNU_SELECT_CHAIN,   C|'E',  mEdit },
-{ 1, "Select &All",                 MNU_SELECT_ALL,     C|'A',  mEdit },
-{ 1, "&Unselect All",               MNU_UNSELECT_ALL,   ESC,    mEdit },
-{ 1, NULL, 0, 0, NULL },
-{ 1, "Rename",                      MNU_EDIT_RENAME,     F(2), mEdit },
-{ 1, "Cop&y Constraints",			MNU_COPY_CONSTRAINTS, 0,   mEdit },
-{ 1, "RT2014 version", MNU_VERSION_RT, 0, mEdit },
-{ 1, "Bad constraint search (CPU Killer)", MNU_JACOBIAN_FIND_BAD, 0, mEdit },
+	{ 0, "&Edit", 0, 0, NULL },
+	{ 1, "&Undo", MNU_UNDO, C | 'Z', mEdit },
+	{ 1, "&Redo", MNU_REDO, C | 'Y', mEdit },
+	{ 1, "Re&generate All", MNU_REGEN_ALL, ' ', mEdit },				//Spacebar will regenerate
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Snap Selection to &Grid", MNU_SNAP_TO_GRID, '.', mEdit },
+	{ 1, "Rotate Imported &90\260", MNU_ROTATE_90, '9', mEdit },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Cu&t", MNU_CUT, C | 'X', mClip },
+	{ 1, "&Copy", MNU_COPY, C | 'C', mClip },
+	{ 1, "&Paste", MNU_PASTE, C | 'V', mClip },
+	{ 1, "Paste &Transformed...", MNU_PASTE_TRANSFORM, C | 'T', mClip },
+	{ 1, "&Delete", MNU_DELETE, DEL, mClip },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Select &Edge Chain", MNU_SELECT_CHAIN, C | 'E', mEdit },
+	{ 1, "Select &All", MNU_SELECT_ALL, C | 'A', mEdit },
+	{ 1, "&Unselect All", MNU_UNSELECT_ALL, ESC, mEdit },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Rename", MNU_EDIT_RENAME, F(2), mEdit },
+	{ 1, "Cop&y Constraints", MNU_COPY_CONSTRAINTS, 0, mEdit },
+	{ 1, "RT2014 version", MNU_VERSION_RT, 0, mEdit },
+//	{ 1, "Bad constraint search (CPU Killer)", MNU_JACOBIAN_FIND_BAD, 0, mEdit }, OBSOLETE
 
 
-{ 0, "&View",                       0,                  0,      NULL  },
-{ 1, "Zoom &In",                    MNU_ZOOM_IN,        '+',    mView },
-{ 1, "Zoom &Out",                   MNU_ZOOM_OUT,       '-',    mView },
-{ 1, "Zoom To &Fit",                MNU_ZOOM_TO_FIT,    'F',    mView },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "Align View to &Workplane",    MNU_ONTO_WORKPLANE, 'W',    mView },
-{ 1, "Nearest &Ortho View",         MNU_NEAREST_ORTHO,  '0',   mView },
-{ 1, "Nearest &Isometric View",     MNU_NEAREST_ISO,    F(3),   mView },
-{ 1, "&Center View At Point",       MNU_CENTER_VIEW,    F(4),   mView },
-{ 1,  NULL,                         0,                  0,      NULL  },
-{ 1, "Show Snap &Grid",             MNU_SHOW_GRID,      '>',    mView },
-{ 1, "Use &Perspective Projection", MNU_PERSPECTIVE_PROJ,'`',   mView },
-{ 1,  NULL,                         0,                  0,      NULL  },
+
+	{ 0, "&View", 0, 0, NULL },
+	{ 1, "Zoom &In", MNU_ZOOM_IN, '+', mView },
+	{ 1, "Zoom &Out", MNU_ZOOM_OUT, '-', mView },
+	{ 1, "Zoom To &Fit", MNU_ZOOM_TO_FIT, 'F', mView },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Align View to &Workplane", MNU_ONTO_WORKPLANE, 'W', mView },
+	{ 1, "Nearest &Ortho View", MNU_NEAREST_ORTHO, '0', mView },
+	{ 1, "Nearest &Isometric View", MNU_NEAREST_ISO, F(3), mView },
+	{ 1, "&Center View At Point", MNU_CENTER_VIEW, F(4), mView },
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Show Snap &Grid", MNU_SHOW_GRID, '>', mView },
+	{ 1, "Use &Perspective Projection", MNU_PERSPECTIVE_PROJ, '`', mView },
+	{ 1,  NULL,                         0,                  0,      NULL  },
 #ifdef HAVE_FLTK
-{ 1, "Show Menu &Bar",              MNU_SHOW_MENU_BAR,  F(12),  mView },
+	{ 1, "Show Menu &Bar", MNU_SHOW_MENU_BAR, F(12), mView },
+#endif
+	{ 1, "Show &Toolbar", MNU_SHOW_TOOLBAR, 0, mView },
+	{ 1, "Show Text &Window", MNU_SHOW_TEXT_WND, '\t', mView },
+	{ 1, "Test	", MNU_VIEW_TEST, F(12), mView },		//RT2014: Experiment with how to implement - activate next group - method
+	{ 1, "Activate Next Group", MNU_SHOW_NEXT_GROUP, PGDN, mView },		//RT2014:  activate next group - method
+	{ 1, "Activate Previous Group", MNU_SHOW_PREV_GROUP, PGUP, mView },		//RT2014: activate previous group - method
+
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "Dimensions in &Inches", MNU_UNITS_INCHES, 0, mView },
+	{ 1, "Dimensions in &Millimeters", MNU_UNITS_MM, 0, mView },
+#ifdef HAVE_FLTK_FULLSCREEN
+	{ 1, NULL, 0, 0, NULL },
+	{ 1, "&Full Screen", MNU_FULL_SCREEN, F(11), mView },
 #endif
 { 1, "Show &Toolbar",               MNU_SHOW_TOOLBAR,   0,      mView },
 { 1, "Show Text &Window",           MNU_SHOW_TEXT_WND,  '\t',   mView },
-{ 1, "Test	",						MNU_VIEW_TEST,		F(12),	mView },		//RT2014: Experiment with how to implement - activate next group - method
-{ 1, "Activate Next Group",			MNU_SHOW_NEXT_GROUP, PGDN,	mView },		//RT2014:  activate next group - method
-{ 1, "Activate Previous Group",		MNU_SHOW_PREV_GROUP, PGUP,	mView },		//RT2014: activate previous group - method
-
 { 1,  NULL,                         0,                  0,      NULL  },
 { 1, "Dimensions in &Inches",       MNU_UNITS_INCHES,   0,      mView },
 { 1, "Dimensions in &Millimeters",  MNU_UNITS_MM,       0,      mView },
@@ -174,8 +184,6 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 #undef S
 #undef C
 #undef F
-#undef PGUP
-#undef PGDN
 
 bool MakeAcceleratorLabel(int accel, char *out) {
     if(!accel) {
@@ -203,12 +211,10 @@ bool MakeAcceleratorLabel(int accel, char *out) {
 
         case GraphicsWindow::ESCAPE_KEY: key = "Esc"; break;
         case GraphicsWindow::DELETE_KEY: key = "Del"; break;
-		case GraphicsWindow::PGUP_KEY: key = "Pg Up"; break;
-		case GraphicsWindow::PGDWN_KEY: key = "Pg Dwn"; break;
     }
 
-    if(key[0] <  '!' || key[0] >  '~') ERRMSG_RT();
-    if(key[0] >= 'a' && key[0] <= 'z') ERRMSG_RT();
+    if(key[0] <  '!' || key[0] >  '~') oops();
+    if(key[0] >= 'a' && key[0] <= 'z') oops();
 
     sprintf(out, "%s%s%s", ctrl, shift, key);
     return true;
@@ -217,7 +223,7 @@ bool MakeAcceleratorLabel(int accel, char *out) {
 void GraphicsWindow::Init(void) {
     memset(this, 0, sizeof(*this));
 
-    scale = 5;
+    scaleWin = 5;
     offset    = Vector::From(0, 0, 0);
     projRight = Vector::From(1, 0, 0);
     projUp    = Vector::From(0, 1, 0);
@@ -272,7 +278,7 @@ void GraphicsWindow::AnimateOnto(Quaternion quatf, Vector offsetf) {
         quatf = quatf.ScaledBy(-1);
         mp = mm;
     }
-    double mo = (offset0.Minus(offsetf)).Magnitude()*scale;
+    double mo = (offset0.Minus(offsetf)).Magnitude()*scaleWin;
 
     // Animate transition, unless it's a tiny move.
     int32_t dt = (mp < 0.01 && mo < 10) ? (-20) :
@@ -312,7 +318,7 @@ void GraphicsWindow::HandlePointForZoomToFit(Vector p,
     Vector pp = ProjectPoint4(p, &w);
     // If div is true, then we calculate a perspective projection of the point.
     // If not, then we do a parallel projection regardless of the current
-    // scale factor.
+    // scaleWin factor.
     if(div) {
         pp = pp.ScaledBy(1.0/w);
     }
@@ -381,15 +387,15 @@ void GraphicsWindow::ZoomToFit(bool includingInvisibles) {
 
     // And based on this, we calculate the scale and offset
     if(EXACT(dx == 0 && dy == 0)) {
-        scale = 5;
+        scaleWin = 5;
     } else {
         double scalex = 1e12, scaley = 1e12;
         if(EXACT(dx != 0)) scalex = 0.9*width /dx;
         if(EXACT(dy != 0)) scaley = 0.9*height/dy;
-        scale = min(scalex, scaley);
+        scaleWin = min(scalex, scaley);
 
-        scale = min(300, scale);
-        scale = max(0.003, scale);
+        scaleWin = min(300, scaleWin);
+        scaleWin = max(0.003, scaleWin);
     }
 
     // Then do another run, considering the perspective.
@@ -402,13 +408,12 @@ void GraphicsWindow::ZoomToFit(bool includingInvisibles) {
     if(wmin < 0.1) {
         double k = SS.CameraTangent();
         // w = 1+k*scale*z
-        double zmin = (wmin - 1)/(k*scale);
-        // 0.1 = 1 + k*scale*zmin
-        // (0.1 - 1)/(k*zmin) = scale
-        scale = min(scale, (0.1 - 1)/(k*zmin));
+        double zmin = (wmin - 1)/(k*scaleWin);
+        // 0.1 = 1 + k*scaleWin*zmin
+        // (0.1 - 1)/(k*zmin) = scaleWin
+        scaleWin = min(scaleWin, (0.1 - 1)/(k*zmin));
     }
 }
-
 //RT   **************************************************** Start of intermistic code *************************************************************
 //RT2014	These functions break the coding style, but right now I don't know how and where to put the code, sorry its realy ugly I know
 
@@ -430,52 +435,65 @@ Group *GroupBefore(hGroup hFromGroup){				// Return the group before a given gro
 	for (g = SK.group.NextAfter(SK.group.First()); g; g = SK.group.NextAfter(g)) {//RT: Run through all groups starting from second group
 		if (hFromGroup.v == g->h.v)	//Found active
 		{
-			return  PreviousGroup ;	//				Return the group object
+			return  PreviousGroup;	//				Return the group object
 		}
 		PreviousGroup = g;	// last group encountered
 	}
 	return nullptr;		// Not found so return nullpointer
 }
-void ActivateGroup(Group *SetGroup = nullptr){
+void ActivateGroup(Group *SetGroup = nullptr){          //RT1216 used by keyup/dwn (should be cleaned up)
 	if (SetGroup != nullptr){
 		SS.GW.activeGroup = SetGroup->h;
 		SetGroup->visible = TRUE;								//RT:Make  visible
 		SK.GetGroup(SS.GW.activeGroup)->Activate();				//Activate the group
 		SS.GW.EnsureValidActives();
-
+        SS.TW.shown.group=SS.GW.activeGroup;                //Set the TW (browsers) shown group to the active group
+        SS.TW.Show();                                   // Paint the TW
 	}
 }
 void ActivatePreviousGroup(void){
-Group *SetGroup = nullptr;
+	Group *SetGroup = nullptr;
 	SetGroup = GroupBefore(SS.GW.activeGroup);
 	ActivateGroup(SetGroup);
 }
 void ActivateNextGroup(void){
-Group *SetGroup = nullptr;
+	Group *SetGroup = nullptr;
 	SetGroup = GroupAfter(SS.GW.activeGroup);
 	ActivateGroup(SetGroup);
 }
-int GoDirection = 10;
-void RTTest(int Param){	//RT2014 Prototyping new code
+// New code prototype area
 
-	INT32  srcGrp = 3, dstGrp = 2,swapGrp=4 ;	//Just for prototyping, should be selecable in some way
+
+void RTMoveReq(int nSrcGrp, int nDstGrp){
+	hGroup hSrcGrp = SK.group.elem[nSrcGrp].h;
+	hGroup hDstGrp = SK.group.elem[nDstGrp].h;
 	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
-		Request *r = &(SK.request.elem[i]);		//Move old elements in destinations to a swap group
-		if (r->group.v == dstGrp){
-			r->group.v = swapGrp;
+		Request *r = &(SK.request.elem[i]);		//Pointer to the element
+		if (r->type == Request::WORKPLANE){		// Dont move a workplane
+			sprintf(r->str.str, "Plane%d", r->h.v);
+			continue;
+		}
+		else if (r->group.v == nSrcGrp){
+			r->group.v = hDstGrp.v;		//Change the owner of
+			r->workplane.v = SK.group.elem[nDstGrp].activeWorkplane.v;
 		}
 	}
-	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
-		Request *r = &(SK.request.elem[i]);		//Move old elements in destinations to a swap group
-		if (r->group.v == srcGrp)				// Move source to destination
-		{
-			r->group.v = dstGrp;
+}
+void RTTest(int Param){	//RT2014 Prototyping new code
+	// Change imported file
+	//TextWindow:editImportFileNameRT(0, 0);
 
-		}
-	}										//Hereafter move swap to source group
 
+
+	// Following is on stand by. it sort of works
+	int  nSrcGrp = 3, nDstGrp = 2, nSwapGrp = 4;	//Just for prototyping, should be selecable in some way
+	RTMoveReq(nDstGrp, nSwapGrp);		//Dest to temp
+	RTMoveReq(nSrcGrp, nDstGrp);
+	RTMoveReq(nSwapGrp, nSrcGrp);
 	SS.GenerateAll(0, INT_MAX);
 	return;
+
+
 	SS.GW.GroupSelection();				// Prepare selection
 	if (SS.GW.gs.entities < 1 || SS.GW.gs.n <1) return;	//Return if nothing is selected
 	// Go through selected entities
@@ -484,55 +502,52 @@ void RTTest(int Param){	//RT2014 Prototyping new code
 		if (he.isFromRequest()) {
 			hRequest hr = he.request();
 			Request *r = SK.GetRequest(hr);
-			if (r->group.v == srcGrp){
-				r->group.v = dstGrp;		// Move the request entity
-			}
 		}
 	}
 
-	 
+
 
 }
 
 
 
 void doUnselectAll(){				//RT copied the unselect all code here
-    SS.GW.GroupSelection();
-            // If there's nothing selected to de-select, and no operation
-     if(SS.GW.gs.n               == 0 &&
-               SS.GW.gs.constraints     == 0 &&
-               SS.GW.pending.operation  == 0) return;
-    SS.GW.ClearSuper();
-    SS.TW.HideEditControl();
-    SS.nakedEdges.Clear();
-    SS.justExportedInfo.draw = false;
-    // This clears the marks drawn to indicate which points are
-    // still free to drag.
-    Param *p;
-    for(p = SK.param.First(); p; p = SK.param.NextAfter(p)) {
-        p->free = false;
-            }
+	SS.GW.GroupSelection();
+	// If there's nothing selected to de-select, and no operation
+	if (SS.GW.gs.n == 0 &&
+		SS.GW.gs.constraints == 0 &&
+		SS.GW.pending.operation == 0) return;
+	SS.GW.ClearSuper();
+	SS.TW.HideEditControl();
+	SS.nakedEdges.Clear();
+	SS.justExportedInfo.draw = false;
+	// This clears the marks drawn to indicate which points are
+	// still free to drag.
+	Param *p;
+	for (p = SK.param.First(); p; p = SK.param.NextAfter(p)) {
+		p->free = false;
+	}
 }
 
 void doRenameEntity(){      //RT Rename the currently selected entity
-    Entity *e;
+	Entity *e;
 	if (SS.GW.gs.n == 1 && (SS.GW.gs.points == 1 || SS.GW.gs.entities == 1)) {
 		e = SK.GetEntity(SS.GW.gs.points == 1 ? SS.GW.gs.point[0] : SS.GW.gs.entity[0]);
 		TextWindow::ScreenEditTtfText(108, e->h.request().v);
 	}
 	else
-        doUnselectAll();
+		doUnselectAll();
 }
 //RT   **************************************************** End of new code *************************************************************
 void GraphicsWindow::MenuView(int id) {
     switch(id) {
         case MNU_ZOOM_IN:
-            SS.GW.scale *= 1.2;
+            SS.GW.scaleWin *= 1.2;
             SS.later.showTW = true;
             break;
 
         case MNU_ZOOM_OUT:
-            SS.GW.scale /= 1.2;
+            SS.GW.scaleWin /= 1.2;
             SS.later.showTW = true;
             break;
 
@@ -656,21 +671,22 @@ void GraphicsWindow::MenuView(int id) {
             InvalidateGraphics();
             break;
 
-        case MNU_SHOW_TEXT_WND:
-            SS.GW.showTextWindow = !SS.GW.showTextWindow;
-            SS.GW.EnsureValidActives();
-            break;
+		case MNU_SHOW_TEXT_WND:
+			SS.GW.showTextWindow = !SS.GW.showTextWindow;
+			SS.GW.EnsureValidActives();
+			break;
 
-        case MNU_VIEW_TEST:								//RT Prototyping experimental codes
+		case MNU_VIEW_TEST:								//RT Prototyping experimental codes
 			RTTest(1);
-            break;
+			break;
 		case MNU_SHOW_NEXT_GROUP:								//RT Activate the next group from keyboard
 			ActivateNextGroup();
 			break;
 		case MNU_SHOW_PREV_GROUP:								//RT Activate the next group from keyboard
 			ActivatePreviousGroup();
 			break;
-		case MNU_UNITS_INCHES:
+
+        case MNU_UNITS_INCHES:
             SS.viewUnits = SolveSpace::UNIT_INCHES;
             SS.later.showTW = true;
             SS.GW.EnsureValidActives();
@@ -687,7 +703,7 @@ void GraphicsWindow::MenuView(int id) {
             SS.GW.EnsureValidActives();
             break;
 
-        default: ERRMSG_RT();
+        default: oops();
     }
     InvalidateGraphics();
 }
@@ -763,8 +779,8 @@ void GraphicsWindow::EnsureValidActives(void) {
     CheckMenuById(MNU_PERSPECTIVE_PROJ, SS.usePerspectiveProj);
     CheckMenuById(MNU_SHOW_GRID, SS.GW.showSnapGrid);
 	CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
-	CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey&&1);
-	CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions&&1);
+	CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey & REV1RT);	//RT
+//obsolete	CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions & SOLVER_FINDBAD); //RT
 
 #ifdef HAVE_FLTK_FULLSCREEN
     CheckMenuById(MNU_FULL_SCREEN, FullScreenIsActive());
@@ -1032,16 +1048,18 @@ void GraphicsWindow::MenuEdit(int id) {
 			CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
 			break;
 		case MNU_VERSION_RT:
-			SS.revisionUnlockKey = (SS.revisionUnlockKey ^ 0x1);	//XOR flag constant
+			SS.revisionUnlockKey = (SS.revisionUnlockKey ^ REV1RT);	//XOR flag constant
+			CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey & REV1RT);	//RT
 			break;
 		case MNU_JACOBIAN_FIND_BAD:
-			SS.solveOptions = (SS.solveOptions ^ 0x1);;
+			SS.solveOptions = (SS.solveOptions ^ SOLVER_FINDBAD);
+			CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions & SOLVER_FINDBAD); //RT
 			break;
 
-        case MNU_EDIT_RENAME:
-            doRenameEntity();
-            break;
-        default: ERRMSG_RT();
+		case MNU_EDIT_RENAME:
+			doRenameEntity();
+			break;
+		default: ERRMSG_RT();
     }
 }
 
@@ -1135,7 +1153,7 @@ c:
             SS.GW.SplitLinesOrCurves();
             break;
 
-        default: ERRMSG_RT();
+        default: oops();
     }
 }
 

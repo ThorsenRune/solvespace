@@ -460,7 +460,7 @@ Vector EntityBase::PointGetNum(void) {
             p = numPoint;
             break;
 
-        default: oops();
+		default: DEBUGPLEASE("NO point found here");
     }
     return p;
 }

@@ -180,7 +180,9 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                 }
                 case 's': {
                     char *s = va_arg(vl, char *);
-                    memcpy(buf, s, min(sizeof(buf), strlen(s)+1));
+					if (!(s))
+						Error("Fejl 1339");
+	                memcpy(buf, s, min(sizeof(buf), strlen(s)+1));
                     break;
                 }
                 case 'c': {
@@ -220,7 +222,7 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                     fmt++;
                     break;
                 }
-                case 'L':
+                case 'L':                   //RTc: A 'link'. L followed by a letter will send the letter in the link parameter
                     if(fmt[1] == '\0') goto done;
                     fmt++;
                     if(*fmt == 'p') {
@@ -296,7 +298,7 @@ void TextWindow::Show(void) {
         Printf(false, "%s", SS.GW.pending.description);
         Printf(true, "%Fl%f%Ll(cancel operation)%E",
             &TextWindow::ScreenUnselectAll);
-    } else if((gs.n > 0 || gs.constraints > 0) && 
+    } else if((gs.n > 0 || gs.constraints > 0) &&
                                     shown.screen != SCREEN_PASTE_TRANSFORMED)
     {
         if(edit.meaning != EDIT_TTF_TEXT) HideEditControl();
@@ -313,6 +315,7 @@ void TextWindow::Show(void) {
             case SCREEN_GROUP_INFO:         ShowGroupInfo();        break;
             case SCREEN_GROUP_SOLVE_INFO:   ShowGroupSolveInfo();   break;
             case SCREEN_CONFIGURATION:      ShowConfiguration();    break;
+			case SCREEN_SHOWOPTIONS:		ShowOptions();			break;		//RT1217
             case SCREEN_STEP_DIMENSION:     ShowStepDimension();    break;
             case SCREEN_LIST_OF_STYLES:     ShowListOfStyles();     break;
             case SCREEN_STYLE_INFO:         ShowStyleInfo();        break;
@@ -480,17 +483,17 @@ Vector TextWindow::HsvToRgb(Vector hsv) {
     while(hmod2 >= 2) hmod2 -= 2;
     double x = (1 - fabs(hmod2 - 1));
     if(hsv.x < 1) {
-        rgb = Vector::From(1, x, 0); 
+        rgb = Vector::From(1, x, 0);
     } else if(hsv.x < 2) {
-        rgb = Vector::From(x, 1, 0); 
+        rgb = Vector::From(x, 1, 0);
     } else if(hsv.x < 3) {
-        rgb = Vector::From(0, 1, x); 
+        rgb = Vector::From(0, 1, x);
     } else if(hsv.x < 4) {
-        rgb = Vector::From(0, x, 1); 
+        rgb = Vector::From(0, x, 1);
     } else if(hsv.x < 5) {
-        rgb = Vector::From(x, 0, 1); 
+        rgb = Vector::From(x, 0, 1);
     } else {
-        rgb = Vector::From(1, 0, x); 
+        rgb = Vector::From(1, 0, x);
     }
     double c = hsv.y*hsv.z;
     double m = 1 - hsv.z;
@@ -710,7 +713,7 @@ bool TextWindow::DrawOrHitTestColorPicker(int how, bool leftDown,
             glVertex2d(cx, hy);
             glVertex2d(cx, hym);
         glEnd();
-    } else if(how == CLICK || 
+    } else if(how == CLICK ||
           (how == HOVER && leftDown && editControl.colorPicker.picker1dActive))
     {
         if(x >= hx && x <= hxm && y >= hy && y <= hym) {
@@ -768,7 +771,7 @@ bool TextWindow::DrawOrHitTestColorPicker(int how, bool leftDown,
             glVertex2d(cx, cy - 5);
             glVertex2d(cx, cy + 4);
         glEnd();
-    } else if(how == CLICK || 
+    } else if(how == CLICK ||
           (how == HOVER && leftDown && editControl.colorPicker.picker2dActive))
     {
         if(x >= hx && x <= hxm && y >= hy && y <= hym) {
@@ -786,7 +789,7 @@ bool TextWindow::DrawOrHitTestColorPicker(int how, bool leftDown,
             editControl.colorPicker.picker2dActive = true;
         }
     }
-    
+
     SetMousePointerToHand(mousePointerAsHand);
     return true;
 }
@@ -804,7 +807,7 @@ void TextWindow::Paint(void) {
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
     glColor3d(1, 1, 1);
-   
+
     glTranslated(-1, 1, 0);
     glScaled(2.0/width, -2.0/height, 1);
     // Make things round consistently, avoiding exact integer boundary
@@ -995,7 +998,7 @@ void TextWindow::MouseEvent(bool leftClick, bool leftDown, double x, double y) {
 #define META (meta[r][c])
     if(leftClick) {
         if(META.link && META.f) {
-            (META.f)(META.link, META.data);
+			(meta[r][c].f)(meta[r][c].link, meta[r][c].data);
             Show();
             InvalidateGraphics();
         }

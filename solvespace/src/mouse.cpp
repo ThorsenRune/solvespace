@@ -4,7 +4,7 @@
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
-
+int keyPressedRT = 0;					//RT1217: Memory for the pressed key, will be set to 0 by key up
 void GraphicsWindow::UpdateDraggedPoint(hEntity hp, double mx, double my) {
     Entity *p = SK.GetEntity(hp);
     Vector pos = p->PointGetNum();
@@ -13,8 +13,8 @@ void GraphicsWindow::UpdateDraggedPoint(hEntity hp, double mx, double my) {
 }
 
 void GraphicsWindow::UpdateDraggedNum(Vector *pos, double mx, double my) {
-    *pos = pos->Plus(projRight.ScaledBy((mx - orig.mouse.x)/scale));
-    *pos = pos->Plus(projUp.ScaledBy((my - orig.mouse.y)/scale));
+    *pos = pos->Plus(projRight.ScaledBy((mx - orig.mouse.x)/scaleWin));
+    *pos = pos->Plus(projUp.ScaledBy((my - orig.mouse.y)/scaleWin));
 }
 
 void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
@@ -46,7 +46,7 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
     Entity *e = SK.GetEntity(he);
     if(e->IsPoint()) {
         AddPointToDraggedList(e->h);
-    } else if(e->type == Entity::LINE_SEGMENT || 
+    } else if(e->type == Entity::LINE_SEGMENT ||
               e->type == Entity::ARC_OF_CIRCLE ||
               e->type == Entity::CUBIC ||
               e->type == Entity::CUBIC_PERIODIC ||
@@ -54,7 +54,7 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
               e->type == Entity::TTF_TEXT)
     {
         int pts;
-        EntReqTable::GetEntityInfo(e->type, e->extraPoints, 
+        EntReqTable::GetEntityInfo(e->type, e->extraPoints,
             NULL, &pts, NULL, NULL);
         for(int i = 0; i < pts; i++) {
             AddPointToDraggedList(e->point[i]);
@@ -124,11 +124,11 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
     if(middleDown) {
         hover.Clear();
 
-        double dx = (x - orig.mouse.x) / scale;
-        double dy = (y - orig.mouse.y) / scale;
+        double dx = (x - orig.mouse.x) / scaleWin;
+        double dy = (y - orig.mouse.y) / scaleWin;
 
         if(!(shiftDown || ctrlDown)) {
-            double s = 0.3*(PI/180)*scale; // degrees per pixel
+            double s = 0.3*(PI/180)*scaleWin; // degrees per pixel
             projRight = orig.projRight.RotatedAbout(orig.projUp, -s*dx);
             projUp = orig.projUp.RotatedAbout(orig.projRight, s*dy);
 
@@ -166,7 +166,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
         havePainted = false;
         return;
     }
- 
+
     if(pending.operation == 0) {
         double dm = orig.mouse.DistanceTo(mp);
         // If we're currently not doing anything, then see if we should
@@ -204,7 +204,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                     hover.Clear();
                     pending.operation = DRAGGING_POINTS;
                 }
-            } else if(hover.constraint.v && 
+            } else if(hover.constraint.v &&
                             SK.GetConstraint(hover.constraint)->HasLabel())
             {
                 ClearSelection();
@@ -397,7 +397,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
             Entity *circle = SK.GetEntity(pending.circle);
             Vector center = SK.GetEntity(circle->point[0])->PointGetNum();
             Point2d c2 = ProjectPoint(center);
-            double r = c2.DistanceTo(mp)/scale;
+            double r = c2.DistanceTo(mp)/scaleWin;
             SK.GetEntity(circle->distance)->DistanceForceTo(r);
 
             SS.MarkGroupDirtyByEntity(pending.circle);
@@ -529,7 +529,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
             AddContextMenuItem("Style Info", CMNU_STYLE_INFO);
         }
         if(gs.withEndpoints > 0) {
-            AddContextMenuItem("Select Edge Chain", CMNU_SELECT_CHAIN);
+            AddContextMenuItem("Select &Edge Chain", CMNU_SELECT_CHAIN);
         }
         if(gs.constraints == 1 && gs.n == 0) {
             Constraint *c = SK.GetConstraint(gs.constraint[0]);
@@ -723,7 +723,11 @@ hRequest GraphicsWindow::AddRequest(int type, bool rememberForUndo) {
     r.group = activeGroup;
     Group *g = SK.GetGroup(activeGroup);
     if(g->type == Group::DRAWING_3D || g->type == Group::DRAWING_WORKPLANE) {
-        r.construction = false;
+		if (SS.revisionUnlockKey && REV1RT){
+			r.construction = (SS.solveOptions & EDIT_DEFAULT2CONSTRUCTION);	//RT drawing construction as default
+		}
+		else
+			r.construction = false;
     } else {
         r.construction = true;
     }
@@ -749,7 +753,7 @@ bool GraphicsWindow::ConstrainPointByHovered(hEntity pt) {
         return true;
     }
     if(e->IsCircle()) {
-        Constraint::Constrain(Constraint::PT_ON_CIRCLE, 
+        Constraint::Constrain(Constraint::PT_ON_CIRCLE,
             pt, Entity::NO_ENTITY, e->h);
         return true;
     }
@@ -785,8 +789,8 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
 
     // The current mouse location
     Vector v = offset.ScaledBy(-1);
-    v = v.Plus(projRight.ScaledBy(mx/scale));
-    v = v.Plus(projUp.ScaledBy(my/scale));
+    v = v.Plus(projRight.ScaledBy(mx/scaleWin));
+    v = v.Plus(projUp.ScaledBy(my/scaleWin));
 
     hRequest hr;
     switch(pending.operation) {
@@ -830,7 +834,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             for(i = 0; i < 4; i++) {
                 Constraint::Constrain(
                     (i % 2) ? Constraint::HORIZONTAL : Constraint::VERTICAL,
-                    Entity::NO_ENTITY, Entity::NO_ENTITY,  
+                    Entity::NO_ENTITY, Entity::NO_ENTITY,
                     lns[i].entity(0));
             }
             ConstrainPointByHovered(lns[2].entity(1));
@@ -868,7 +872,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             hr = AddRequest(Request::ARC_OF_CIRCLE);
             // This fudge factor stops us from immediately failing to solve
             // because of the arc's implicit (equal radius) tangent.
-            Vector adj = SS.GW.projRight.WithMagnitude(2/SS.GW.scale);
+            Vector adj = SS.GW.projRight.WithMagnitude(2/SS.GW.scaleWin);
             SK.GetEntity(hr.entity(1))->PointForceTo(v.Minus(adj));
             SK.GetEntity(hr.entity(2))->PointForceTo(v);
             SK.GetEntity(hr.entity(3))->PointForceTo(v);
@@ -905,7 +909,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             }
             hr = AddRequest(Request::WORKPLANE);
             SK.GetEntity(hr.entity(1))->PointForceTo(v);
-            SK.GetEntity(hr.entity(32))->NormalForceTo( 
+            SK.GetEntity(hr.entity(32))->NormalForceTo(
                 Quaternion::From(SS.GW.projRight, SS.GW.projUp));
             ConstrainPointByHovered(hr.entity(1));
 
@@ -1035,7 +1039,7 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
             // Displace the second point of the new line segment slightly,
             // to avoid creating zero-length edge warnings.
             SK.GetEntity(hr.entity(2))->PointForceTo(
-                v.Plus(projRight.ScaledBy(0.5/scale)));
+                v.Plus(projRight.ScaledBy(0.5/scaleWin)));
 
             // Constrain the line segments to share an endpoint
             Constraint::ConstrainCoincident(pending.point, hr.entity(1));
@@ -1052,8 +1056,22 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
         default:
             ClearPending();
             if(!hover.IsEmpty()) {
-                hoverWasSelectedOnMousedown = IsSelected(&hover);
-                MakeSelected(&hover);
+				if (0==(SS.solveOptions & SELECTION_TOGGLEMODE)){// Original code where clicked elements are added to selection
+					hoverWasSelectedOnMousedown = IsSelected(&hover);
+					MakeSelected(&hover);
+				}
+				else
+				{
+					if (keyPressedRT && GraphicsWindow::SHIFT_MASK)
+					{
+						MakeSelected(&hover);
+					}
+					else
+					{
+						ClearSelection();
+						MakeSelected(&hover);
+					}
+				}
             }
             break;
     }
@@ -1089,7 +1107,7 @@ void GraphicsWindow::MouseLeftUp(double mx, double my) {
             // be the start of marquee selection. But don't do that on the
             // left click to cancel a context menu. The time delay is an ugly
             // hack.
-            if(hover.IsEmpty() && 
+            if(hover.IsEmpty() &&
                 (contextMenuCancelTime == 0 ||
                   (GetMilliseconds() - contextMenuCancelTime) > 200))
             {
@@ -1157,6 +1175,11 @@ void GraphicsWindow::MouseLeftDoubleClick(double mx, double my) {
         }
         ShowGraphicsEditControl((int)p2.x, (int)p2.y-4, s);
     }
+	else if (SS.solveOptions & EDIT_ENABLENAMING){		// New actions on left mouse doubleclick
+		if (SS.pendingUserCommand)	//This should be zero, otherwise there is some use that I dont know at this point. Find the conflict and correct
+			Error("Please debug:Unexpected pending operation");
+		SS.pendingUserCommand = 3142;			//RT Code for a double click on an entity
+	}
 }
 
 void GraphicsWindow::EditControlDone(const char *s) {
@@ -1207,6 +1230,7 @@ void GraphicsWindow::EditControlDone(const char *s) {
 }
 
 bool GraphicsWindow::KeyDown(int c) {
+	keyPressedRT = c;						//Memory for the keypress
     if(c == '\b') {
         // Treat backspace identically to escape.
         MenuEdit(MNU_UNSELECT_ALL);
@@ -1220,17 +1244,17 @@ void GraphicsWindow::MouseScroll(double x, double y, int delta) {
     double offsetRight = offset.Dot(projRight);
     double offsetUp = offset.Dot(projUp);
 
-    double righti = x/scale - offsetRight;
-    double upi = y/scale - offsetUp;
+    double righti = x/scaleWin - offsetRight;
+    double upi = y/scaleWin - offsetUp;
 
     if(delta > 0) {
-        scale *= 1.2;
+        scaleWin *= 1.2;
     } else {
-        scale /= 1.2;
+        scaleWin /= 1.2;
     }
 
-    double rightf = x/scale - offsetRight;
-    double upf = y/scale - offsetUp;
+    double rightf = x/scaleWin - offsetRight;
+    double upf = y/scaleWin - offsetUp;
 
     offset = offset.Plus(projRight.ScaledBy(rightf - righti));
     offset = offset.Plus(projUp.ScaledBy(upf - upi));
@@ -1281,9 +1305,9 @@ void GraphicsWindow::SpaceNavigatorMoved(double tx, double ty, double tz,
         // Apply the transformation to an imported part. Gain down the Z
         // axis, since it's hard to see what you're doing on that one since
         // it's normal to the screen.
-        Vector t = projRight.ScaledBy(tx/scale).Plus(
-                   projUp   .ScaledBy(ty/scale).Plus(
-                   out      .ScaledBy(0.1*tz/scale)));
+        Vector t = projRight.ScaledBy(tx/scaleWin).Plus(
+                   projUp   .ScaledBy(ty/scaleWin).Plus(
+                   out      .ScaledBy(0.1*tz/scaleWin)));
         Quaternion q = Quaternion::From(aa, aam);
 
         // If we go five seconds without SpaceNavigator input, or if we've
@@ -1304,12 +1328,12 @@ void GraphicsWindow::SpaceNavigatorMoved(double tx, double ty, double tz,
         SS.later.generateAll = true;
     } else {
         // Apply the transformation to the view of the everything. The
-        // x and y components are translation; but z component is scale,
+        // x and y components are translation; but z component is scaleWin,
         // not translation, or else it would do nothing in a parallel
         // projection
-        offset = offset.Plus(projRight.ScaledBy(tx/scale));
-        offset = offset.Plus(projUp.ScaledBy(ty/scale));
-        scale *= exp(0.001*tz); 
+        offset = offset.Plus(projRight.ScaledBy(tx/scaleWin));
+        offset = offset.Plus(projUp.ScaledBy(ty/scaleWin));
+        scaleWin *= exp(0.001*tz);
 
         if(aam > 0.0) {
             projRight = projRight.RotatedAbout(aa, -aam);

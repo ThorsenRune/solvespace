@@ -778,7 +778,7 @@ LRESULT CALLBACK GraphicsWndProc(HWND hwnd, UINT msg, WPARAM wParam,
             LastMousePos.x = x;
             LastMousePos.y = y;
 
-            if(msg == WM_LBUTTONDOWN) {
+            if(msg == WM_LBUTTONDOWN) {					//RTc:	Mouse left click
                 SS.GW.MouseLeftDown(x, y);
             } else if(msg == WM_LBUTTONUP) {
                 SS.GW.MouseLeftUp(x, y);
@@ -1241,7 +1241,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             // then that should probably go to the graphics window instead.
             SetForegroundWindow(GraphicsWnd);
         }
-
+		if (msg.message == WM_KEYUP) {				//RT1217		the key has been released
+			SS.GW.KeyDown(0);						//Remove the pressed key
+		}
         // None of the above; so just a normal message to process.
         TranslateMessage(&msg);
         DispatchMessage(&msg);

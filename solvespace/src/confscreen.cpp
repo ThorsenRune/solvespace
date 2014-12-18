@@ -6,6 +6,22 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+//RT new stuff
+void TextWindow::ChangeRenderDetailWhenSaving(int link, uint32_t v) {
+	char str[1024];
+	if (v == RESETDEV){
+		SS.renderDetailWhenSaving = 0;		//Disable to option
+	}
+	else
+	{
+		if (0 == SS.renderDetailWhenSaving) SS.renderDetailWhenSaving = SS.GW.scaleWin;
+		sprintf(str, "%.2f", SS.renderDetailWhenSaving);
+		SS.TW.ShowEditControl(7, 3, str);		//Positioning stuff
+		SS.TW.edit.meaning = EDIT_RENDERDETAIL;
+	}
+}
+//RT end of new stuff
+
 void TextWindow::ScreenChangeLightDirection(int link, uint32_t v) {
     char str[1024];
     sprintf(str, "%.2f, %.2f, %.2f", CO(SS.lightDir[v]));
@@ -166,11 +182,13 @@ void TextWindow::ScreenChangeGCodeParameter(int link, uint32_t v) {
     }
     SS.TW.ShowEditControl(row, 14, buf);
 }
-
+//RT New edit renderDetailWhenSaving
 void TextWindow::ShowConfiguration(void) {
     int i;
+
+
     Printf(true, "%Ft user color (r, g, b)");
-    
+
     for(i = 0; i < SS.MODEL_COLORS; i++) {
         Printf(false, "%Bp   #%d:  %Bz  %Bp  (%@, %@, %@) %f%D%Ll%Fl[change]%E",
             (i & 1) ? 'd' : 'a',
@@ -181,7 +199,7 @@ void TextWindow::ShowConfiguration(void) {
             SS.modelColor[i].blueF(),
             &ScreenChangeColor, i);
     }
-    
+
     Printf(false, "");
     Printf(false, "%Ft light direction               intensity");
     for(i = 0; i < 2; i++) {
@@ -293,13 +311,51 @@ void TextWindow::ShowConfiguration(void) {
     Printf(false, "  %Fd%f%Ll%c  check sketch for closed contour%E",
         &ScreenChangeCheckClosedContour,
         SS.checkClosedContour ? CHECK_TRUE : CHECK_FALSE);
-    
+
     Printf(false, "");
     Printf(false, " %Ftgl vendor   %E%s", glGetString(GL_VENDOR));
     Printf(false, " %Ft   renderer %E%s", glGetString(GL_RENDERER));
     Printf(false, " %Ft   version  %E%s", glGetString(GL_VERSION));
 }
 
+//RT1217 Options screen
+void TextWindow::ShowOptions(void) {
+
+	if (SS.revisionUnlockKey && REV1RT){
+		Printf(false, "%Ft Rendering level when saving %E");
+		Printf(false, "%Ba   %@ %Fl%Ll%f%D[Disable]%E 	%Fl%Ll%f%D[Set] %E		",
+								SS.renderDetailWhenSaving,
+								&ChangeRenderDetailWhenSaving, RESETDEV,
+								&ChangeRenderDetailWhenSaving, EDIT_RENDERDETAIL);
+	}
+
+	Printf(false, "");
+	Printf(false, "EDIT");
+	Printf(false, "  %Fd%f%D%Ll%c Bad constraint search (CPU Killer) %E",
+		&ScreenShowOptions, SOLVER_FINDBAD,
+		(SS.solveOptions  & 	SOLVER_FINDBAD) ? CHECK_TRUE : CHECK_FALSE);
+	Printf(false, "  %Fd%f%D%Ll%c Selection mode: Shift+click %E",
+		&ScreenShowOptions, SELECTION_TOGGLEMODE,
+		(SS.solveOptions  & 	SELECTION_TOGGLEMODE) ? CHECK_TRUE : CHECK_FALSE);
+
+	Printf(false, "  %Fd%f%D%Ll%c Draw construction lines as default %E",
+		&ScreenShowOptions, EDIT_DEFAULT2CONSTRUCTION,
+		(SS.solveOptions  & 	EDIT_DEFAULT2CONSTRUCTION) ? CHECK_TRUE : CHECK_FALSE);
+
+	Printf(false, "  %Fd%f%D%Ll%c Copy Constraints %E",
+		&ScreenShowOptions, EDIT_COPYCONSTRAINTS,
+		(SS.solveOptions  & 	EDIT_COPYCONSTRAINTS) ? CHECK_TRUE : CHECK_FALSE);
+		SS.copyConstraints = (SS.solveOptions  & 	EDIT_COPYCONSTRAINTS);
+	Printf(false, "  %Fd%f%D%Ll%c Enable element naming  %E",
+		&ScreenShowOptions, EDIT_ENABLENAMING,
+		(SS.solveOptions  & 	EDIT_ENABLENAMING) ? CHECK_TRUE : CHECK_FALSE);
+		SS.copyConstraints = (SS.solveOptions  & 	EDIT_ENABLENAMING);
+	Printf(false, "  %Fd%f%D%Ll%c Show all Constraints %E",
+		&ScreenShowOptions, SHOW_COMMENTS_FOR_ALL_GROUPS,
+		(SS.solveOptions  & 	SHOW_COMMENTS_FOR_ALL_GROUPS) ? CHECK_TRUE : CHECK_FALSE);
+		SS.copyConstraints = (SS.solveOptions  & 	SHOW_COMMENTS_FOR_ALL_GROUPS);
+
+}
 bool TextWindow::EditControlDoneForConfiguration(const char *s) {
     switch(edit.meaning) {
         case EDIT_LIGHT_INTENSITY:
@@ -332,7 +388,15 @@ bool TextWindow::EditControlDoneForConfiguration(const char *s) {
             SS.GenerateAll(0, INT_MAX);
             break;
         }
-        case EDIT_MAX_SEGMENTS: {
+//RT New stuff
+        case EDIT_RENDERDETAIL: {
+			SS.renderDetailWhenSaving =   atof(s);
+			if (SS.renderDetailWhenSaving)			SS.GW.scaleWin =SS.renderDetailWhenSaving;
+			SS.GenerateAll(0, INT_MAX);
+            break;
+        }
+//RT End stuff
+		case EDIT_MAX_SEGMENTS: {
             SS.maxSegments = min(1000, max(7, atoi(s)));
             SS.GenerateAll(0, INT_MAX);
             break;

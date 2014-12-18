@@ -42,8 +42,26 @@
 #define oops() do { dbp("oops at line %d, file %s\n", __LINE__, __FILE__); \
                     if(0) *(char *)0 = 1; exit(-1); } while(0)
 // A softer alternative to the above error message, leaving more information on the screen, not just chrashing
-#define ERRMSG_RT() do { Error("Error at line %d, file %s\n", __LINE__, __FILE__); \
-                      } while(0)
+#define ERRMSG_RT() do { Error("%s Error at line %d, file %s <%s>\n", __LINE__, __FILE__); \
+					                      } while(0)
+#define DEBUGPLEASE(message) do { Error("%s Error at line %d, file %s <%s>\n",message, __LINE__, __FILE__,  __FUNCTION__); \
+										  					                      } while(0)
+//*************************************Revision key constants
+#define REV1RT	(1<<1)
+		// Free revision mask constants
+#define REV2	(1<<2)
+#define REV3	(1<<3)
+#define REV4	(1<<4)
+#define REV5	(1<<5)
+
+//*************************************Options mask constants
+#define SOLVER_FINDBAD				(1<<1)
+#define SELECTION_TOGGLEMODE		(1<<2)
+#define EDIT_COPYCONSTRAINTS		(1<<3)
+#define EDIT_DEFAULT2CONSTRUCTION	(1<<4)
+#define SHOW_COMMENTS_FOR_ALL_GROUPS (1<<5)
+#define EDIT_ENABLENAMING            (1<<6)
+//*************************************
 
 #ifndef min
 #   define min(x, y) ((x) < (y) ? (x) : (y))
@@ -152,8 +170,8 @@ int SaveFileYesNoCancel(void);
 #define PNG_EXT "png"
 // Triangle mesh
 #define MESH_PATTERN \
-    PAT1("Wavefront OBJ Mesh", "obj") \
     PAT1("STL Mesh", "stl") \
+    PAT1("Wavefront OBJ Mesh", "obj") \
     ENDPAT
 #define MESH_EXT "stl"
 #define MESH_OBJ_EXT "obj"
@@ -219,8 +237,6 @@ int64_t GetMilliseconds(void);
 int64_t GetUnixTime(void);
 
 void dbp(const char *str, ...);
-void dbp_RT(const char *str, ...);					//A softer version of debug print without the brutal shutdown!?
-
 #define DBPTRI(tri) \
     dbp("tri: (%.3f %.3f %.3f) (%.3f %.3f %.3f) (%.3f %.3f %.3f)", \
         CO((tri).a), CO((tri).b), CO((tri).c))
@@ -468,7 +484,7 @@ public:
     void LoadGlyph(int index);
     bool LoadFontFromFile(bool nameOnly);
     const char *FontFileBaseName(void);
-   
+
     void Flush(void);
     void Handle(int *dx, int x, int y, bool onCurve);
     void PlotCharacter(int *dx, int c, double spacing);
@@ -657,7 +673,7 @@ public:
     inline CONSTRAINT *GetConstraint(hConstraint h)
         { return constraint.FindById(h); }
     inline ENTITY  *GetEntity (hEntity  h) { return entity. FindById(h); }
-    inline ENTITY  *GetEntityNoOops (hEntity  h) { return entity. FindByIdNoOops(h); }    
+    inline ENTITY  *GetEntityNoOops (hEntity  h) { return entity. FindByIdNoOops(h); }
     inline Param   *GetParam  (hParam   h) { return param.  FindById(h); }
     inline Request *GetRequest(hRequest h) { return request.FindById(h); }
 	inline Request *GetRequest0(hRequest h) { return request.FindByIdNoOops(h); }		//RT return hRequest or null
@@ -730,8 +746,12 @@ public:
     bool     exportCanvasSizeAuto;
 	bool	 copyConstraints;
 	int		 revisionUnlockKey;				//RT Binary match for unlocking specific revisions RT1=&1
-	int		 solveOptions=0x1;				//RT: Flags for  controlling the solver
-											//   0x1	: Dont attempt to propose fixes jacobian singularity
+	int		 solveOptions  ;	//RT: Options flags
+									// SOLVER_FINDBAD	: Dont attempt to propose fixes jacobian singularity
+									// OPTION2 : draw new requests as construction lines
+	int		RTDebugCntr ;		//counter available for debugging purposes
+	double   renderDetailWhenSaving;	//RT	this parameter sets a fixed zoom (=SS.GW.scaleWin) when saving
+
     struct {
         float   left;
         float   right;
@@ -916,6 +936,9 @@ public:
     static void MenuHelp(int id);
 
     void Clear(void);
+
+	//RT cant figure out how the program is queuing commands so here is a temporary variable for saving a user command like doubleclick on an entity will activate the group
+	int pendingUserCommand;			//RT
 };
 
 extern SolveSpace SS;

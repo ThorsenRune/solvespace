@@ -97,11 +97,14 @@ bool SolveSpace::PruneRequests(hGroup hg) {
     int i;
     for(i = 0; i < SK.entity.n; i++) {
         Entity *e = &(SK.entity.elem[i]);
-        if(e->group.v != hg.v) continue;
+        if(e->group.v != hg.v)		//Same group, do nothing
+			continue;
 
-        if(EntityExists(e->workplane)) continue;
+        if(EntityExists(e->workplane))	//Has a workplane
+			continue;
 
-        if(!e->h.isFromRequest()) oops();
+        if(!e->h.isFromRequest())
+			oops();
 
         (deleted.requests)++;
         SK.request.RemoveById(e->h.request());
@@ -167,7 +170,7 @@ void SolveSpace::GenerateAll(void) {
 
 void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
     int i, j;
-	int64_t timeOut = GetMilliseconds() + 5000;
+
     // Remove any requests or constraints that refer to a nonexistent
     // group; can check those immediately, since we know what the list
     // of groups should be.
@@ -176,14 +179,13 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
 
     // Don't lose our numerical guesses when we regenerate.
     IdList<Param,hParam> prev;
-    SK.param.MoveSelfInto(&prev);		//Move the old param list into the list called prev
+    SK.param.MoveSelfInto(&prev);
     SK.entity.Clear();
 
     int64_t inTime = GetMilliseconds();
 
     bool displayedStatusMessage = false;
     for(i = 0; i < SK.group.n; i++) {
-
         Group *g = &(SK.group.elem[i]);
 
         int64_t now = GetMilliseconds();
@@ -234,7 +236,7 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
         for(j = 0; j < SK.request.n; j++) {
             Request *r = &(SK.request.elem[j]);
             if(r->group.v != g->h.v) continue;
-			// There is a request for an entity in the group (outer loop)
+
             r->Generate(&(SK.entity), &(SK.param));
         }
         g->Generate(&(SK.entity), &(SK.param));
@@ -339,7 +341,7 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
         }
         memset(&deleted, 0, sizeof(deleted));
     }
-    
+
     FreeAllTemporary();
     allConsistent = true;
     return;
@@ -373,7 +375,7 @@ void SolveSpace::ForceReferences(void) {
         SK.GetParam(origin->param[1])->known = true;
         SK.GetParam(origin->param[2])->known = true;
         // The quaternion that defines the rotation, from the table.
-        Entity *normal = SK.GetEntity(wrkpl->normal); 
+        Entity *normal = SK.GetEntity(wrkpl->normal);
         normal->NormalForceTo(Quat[i].q);
         SK.GetParam(normal->param[0])->known = true;
         SK.GetParam(normal->param[1])->known = true;
@@ -466,8 +468,8 @@ void SolveSpace::SolveGroup(hGroup hg, bool andFindFree) {
 
     MarkDraggedParams();
     g->solved.remove.Clear();
-    int how = sys.Solve(g, &(g->solved.dof),
-		&(g->solved.remove), (solveOptions&&0x1), andFindFree);
+	int how = sys.Solve(g, &(g->solved.dof),
+		&(g->solved.remove), (SS.solveOptions & SOLVER_FINDBAD), andFindFree);
     if((how != System::SOLVED_OKAY) ||
        (how == System::SOLVED_OKAY && g->solved.how != System::SOLVED_OKAY))
     {

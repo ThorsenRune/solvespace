@@ -25,7 +25,7 @@ void Constraint::LineDrawOrGetDistance(Vector a, Vector b) {
             // The only constraints with styles should be comments, so don't
             // check otherwise, save looking up the styles constantly.
             if(type == COMMENT && Style::Width(hs) >= 3.0) {
-                ssglFatLine(a, b, Style::Width(hs) / SS.GW.scale);
+                ssglFatLine(a, b, Style::Width(hs) / SS.GW.scaleWin);
             } else {
                 glBegin(GL_LINE_STRIP);
                     ssglVertex3v(a);
@@ -56,27 +56,68 @@ double Constraint::EllipticalInterpolation(double rx, double ry, double theta) {
 
     return v;
 }
+//RT1217
+char *Constraint::Label1(void) {					//RT1217 rewriting constraints with name. Refs are denoted by ()
+	static char Ret[1024];
+	static char Ret2[1024];
+	char* sr1 = " ";
+	char* sr2 = " ";     // Parenthesis for references
+	if (*comment.str != '\0'){             //RT1216 add name to reference
+		sprintf(Ret2, "%s = ", comment.str);
+	}
+	else sprintf(Ret2, "");    //Make parenthesis if its a reference
+	if (reference) {
+		sr1 = "(";
+		sr2 = ")";
+	}
 
+	if (type == Constraint::ANGLE) {
+		sprintf(Ret, "%s%s%.2f%s", Ret2, sr1, valA, sr2);
+	}
+	else if (type == Constraint::LENGTH_RATIO) {
+		sprintf(Ret, "%s%s%.3f:1%s", Ret2, sr1, valA, sr2);
+	}
+	else if (type == Constraint::COMMENT) {
+		strcpy(Ret, comment.str);
+	}
+	else if (type == Constraint::DIAMETER) {
+		// leading spaces for diameter symbol
+		sprintf(Ret, "  %s%s%s%s", Ret2, sr1, SS.MmToString(valA), sr2);
+	}
+	else {
+		// valA has units of distance
+		sprintf(Ret, "  %s%s%s%s", Ret2, sr1, SS.MmToString(valA), sr2);
+		//strcpy(Ret, SS.MmToString(fabs(valA)));
+	}
+	return Ret;
+}
+//RT End
 char *Constraint::Label(void) {
     static char Ret[1024];
-    if(type == ANGLE) {
-        sprintf(Ret, "%.2f", valA);
-    } else if(type == LENGTH_RATIO) {
-        sprintf(Ret, "%.3f:1", valA);
-    } else if(type == COMMENT) {
-        strcpy(Ret, comment.str);
-    } else if(type == DIAMETER) {
-        // leading spaces for diameter symbol
-        sprintf(Ret, "  %s", SS.MmToString(valA));
-    } else {
-        // valA has units of distance
-        strcpy(Ret, SS.MmToString(fabs(valA)));
-    }
-    if(reference) {
-        strcat(Ret, " REF");
-    }
-    return Ret;
+	if (SS.revisionUnlockKey && REV1RT) return Label1();
+	if (type == ANGLE) {
+		sprintf(Ret, "%.2f", valA);
+	}
+	else if (type == LENGTH_RATIO) {
+		sprintf(Ret, "%.3f:1", valA);
+	}
+	else if (type == COMMENT) {
+		strcpy(Ret, comment.str);
+	}
+	else if (type == DIAMETER) {
+		// leading spaces for diameter symbol
+		sprintf(Ret, "  %s", SS.MmToString(valA));
+	}
+	else {
+		// valA has units of distance
+		strcpy(Ret, SS.MmToString(fabs(valA)));
+	}
+	if (reference) {
+		strcat(Ret, " REF");
+	}
+	return Ret;
 }
+
 
 void Constraint::DoLabel(Vector ref, Vector *labelPos, Vector gr, Vector gu) {
     double th;
@@ -121,7 +162,7 @@ void Constraint::DoLabel(Vector ref, Vector *labelPos, Vector gr, Vector gu) {
         ssglWriteTextRefCenter(s, th, ref, gr, gu, LineCallback, this);
     } else {
         double l = swidth/2 - sheight/2;
-        l = max(l, 5/SS.GW.scale);
+        l = max(l, 5/SS.GW.scaleWin);
         Point2d a = SS.GW.ProjectPoint(ref.Minus(gr.WithMagnitude(l)));
         Point2d b = SS.GW.ProjectPoint(ref.Plus (gr.WithMagnitude(l)));
         double d = dogd.mp.DistanceToLine(a, b.Minus(a), true);
@@ -156,7 +197,7 @@ int Constraint::DoLineTrimmedAgainstBox(Vector ref, Vector a, Vector b) {
     Vector gu = SS.GW.projUp.WithMagnitude(1),
            gr = SS.GW.projRight.WithMagnitude(1);
 
-    double pixels = 1.0 / SS.GW.scale;
+    double pixels = 1.0 / SS.GW.scaleWin;
     char *s = Label();
     double swidth  = ssglStrWidth(s, DEFAULT_TEXT_HEIGHT) + 4*pixels,
            sheight = ssglStrHeight(DEFAULT_TEXT_HEIGHT)   + 8*pixels;
@@ -239,7 +280,7 @@ void Constraint::DoLineWithArrows(Vector ref, Vector a, Vector b,
                                   bool onlyOneExt)
 {
     Vector gn = (SS.GW.projRight.Cross(SS.GW.projUp)).WithMagnitude(1);
-    double pixels = 1.0 / SS.GW.scale;
+    double pixels = 1.0 / SS.GW.scaleWin;
 
     Vector ab   = a.Minus(b);
     Vector ar   = a.Minus(ref);
@@ -283,8 +324,8 @@ void Constraint::DoLineWithArrows(Vector ref, Vector a, Vector b,
 void Constraint::DoEqualLenTicks(Vector a, Vector b, Vector gn) {
     Vector m = (a.ScaledBy(1.0/3)).Plus(b.ScaledBy(2.0/3));
     Vector ab = a.Minus(b);
-    Vector n = (gn.Cross(ab)).WithMagnitude(10/SS.GW.scale);
-    
+    Vector n = (gn.Cross(ab)).WithMagnitude(10/SS.GW.scaleWin);
+
     LineDrawOrGetDistance(m.Minus(n), m.Plus(n));
 }
 
@@ -308,15 +349,15 @@ void Constraint::DoEqualRadiusTicks(hEntity he) {
     Vector d = u.ScaledBy(cos(theta)).Plus(v.ScaledBy(sin(theta)));
     d = d.ScaledBy(r);
     Vector p = center.Plus(d);
-    Vector tick = d.WithMagnitude(10/SS.GW.scale);
+    Vector tick = d.WithMagnitude(10/SS.GW.scaleWin);
     LineDrawOrGetDistance(p.Plus(tick), p.Minus(tick));
 }
 
 void Constraint::DoArcForAngle(Vector a0, Vector da, Vector b0, Vector db,
                                    Vector offset, Vector *ref)
 {
-    Vector gr = SS.GW.projRight.ScaledBy(1/SS.GW.scale);
-    Vector gu = SS.GW.projUp.ScaledBy(1/SS.GW.scale);
+    Vector gr = SS.GW.projRight.ScaledBy(1/SS.GW.scaleWin);
+    Vector gu = SS.GW.projUp.ScaledBy(1/SS.GW.scaleWin);
 
     if(workplane.v != Entity::FREE_IN_3D.v) {
         a0 = a0.ProjectInto(workplane);
@@ -326,7 +367,7 @@ void Constraint::DoArcForAngle(Vector a0, Vector da, Vector b0, Vector db,
     }
 
     bool skew;
-    Vector pi = Vector::AtIntersectionOfLines(a0, a0.Plus(da), 
+    Vector pi = Vector::AtIntersectionOfLines(a0, a0.Plus(da),
                                               b0, b0.Plus(db), &skew);
 
     if(!skew) {
@@ -367,7 +408,7 @@ void Constraint::DoArcForAngle(Vector a0, Vector da, Vector b0, Vector db,
             ssglStrWidth(Label(), DEFAULT_TEXT_HEIGHT)/2,
             ssglStrHeight(DEFAULT_TEXT_HEIGHT)/2,
             tl);
-        *ref = (*ref).Plus(rm.WithMagnitude(adj + 3/SS.GW.scale));
+        *ref = (*ref).Plus(rm.WithMagnitude(adj + 3/SS.GW.scaleWin));
     } else {
         // The lines are skew; no wonderful way to illustrate that.
         *ref = a0.Plus(b0);
@@ -383,11 +424,14 @@ void Constraint::DoArcForAngle(Vector a0, Vector da, Vector b0, Vector db,
 void Constraint::DrawOrGetDistance(Vector *labelPos) {
     if(!SS.GW.showConstraints) return;
     Group *g = SK.GetGroup(group);
+    if (g->hideConstraints)return;  //RT 1218
     // If the group is hidden, then the constraints are hidden and not
     // able to be selected.
-    if(!(g->visible)) return;
+
+        if(!(g->visible)) return;
     // And likewise if the group is not the active group; except for comments
     // with an assigned style.
+       if (SS.solveOptions & SHOW_COMMENTS_FOR_ALL_GROUPS)
     if(g->h.v != SS.GW.activeGroup.v && !(type == COMMENT && disp.style.v)) {
         return;
     }
@@ -398,9 +442,9 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
     // Unit vectors that describe our current view of the scene. One pixel
     // long, not one actual unit.
-    Vector gr = SS.GW.projRight.ScaledBy(1/SS.GW.scale);
-    Vector gu = SS.GW.projUp.ScaledBy(1/SS.GW.scale);
-    Vector gn = (gr.Cross(gu)).WithMagnitude(1/SS.GW.scale);
+    Vector gr = SS.GW.projRight.ScaledBy(1/SS.GW.scaleWin);
+    Vector gu = SS.GW.projUp.ScaledBy(1/SS.GW.scaleWin);
+    Vector gn = (gr.Cross(gu)).WithMagnitude(1/SS.GW.scaleWin);
 
     switch(type) {
         case PT_PT_DISTANCE: {
@@ -515,17 +559,18 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
             Vector mark = ref.Minus(center);
             mark = mark.WithMagnitude(mark.Magnitude()-r);
-            DoLineTrimmedAgainstBox(ref, ref, ref.Minus(mark));
+            DoLineTrimmedAgainstBox(ref, ref, ref.Minus(mark));			//RTc:Draw a line from circle to reference
 
             Vector topLeft;
             DoLabel(ref, &topLeft, gr, gu);
-            if(labelPos) *labelPos = topLeft;
+            if(labelPos)
+				*labelPos = topLeft;
 
             // Draw the diameter symbol
             Vector dc = topLeft;
-            dc = dc.Plus(gu.WithMagnitude(5/SS.GW.scale));
-            dc = dc.Plus(gr.WithMagnitude(9/SS.GW.scale));
-            double dr = 5/SS.GW.scale;
+            dc = dc.Plus(gu.WithMagnitude(5/SS.GW.scaleWin));
+            dc = dc.Plus(gr.WithMagnitude(9/SS.GW.scaleWin));
+            double dr = 5/SS.GW.scaleWin;
             double theta, dtheta = (2*PI)/12;
             for(theta = 0; theta < 2*PI-0.01; theta += dtheta) {
                 LineDrawOrGetDistance(
@@ -574,8 +619,8 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
             ssglColorRGB(RGBf(vc.x, vc.y, vc.z));
 
             for(int a = 0; a < 2; a++) {
-                Vector r = SS.GW.projRight.ScaledBy((a+1)/SS.GW.scale);
-                Vector d = SS.GW.projUp.ScaledBy((2-a)/SS.GW.scale);
+                Vector r = SS.GW.projRight.ScaledBy((a+1)/SS.GW.scaleWin);
+                Vector d = SS.GW.projUp.ScaledBy((2-a)/SS.GW.scaleWin);
                 for(int i = 0; i < 2; i++) {
                     Vector p = SK.GetEntity(i == 0 ? ptA : ptB)-> PointGetNum();
                     glBegin(GL_QUADS);
@@ -594,7 +639,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
         case PT_ON_LINE:
         case PT_ON_FACE:
         case PT_IN_PLANE: {
-            double s = 8/SS.GW.scale;
+            double s = 8/SS.GW.scaleWin;
             Vector p = SK.GetEntity(ptA)->PointGetNum();
             Vector r, d;
             if(type == PT_ON_FACE) {
@@ -620,10 +665,10 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
         case WHERE_DRAGGED: {
             Vector p = SK.GetEntity(ptA)->PointGetNum(),
-                   u = p.Plus(gu.WithMagnitude(8/SS.GW.scale)).Plus(
-                              gr.WithMagnitude(8/SS.GW.scale)),
-                   uu = u.Minus(gu.WithMagnitude(5/SS.GW.scale)),
-                   ur = u.Minus(gr.WithMagnitude(5/SS.GW.scale));
+                   u = p.Plus(gu.WithMagnitude(8/SS.GW.scaleWin)).Plus(
+                              gr.WithMagnitude(8/SS.GW.scaleWin)),
+                   uu = u.Minus(gu.WithMagnitude(5/SS.GW.scaleWin)),
+                   ur = u.Minus(gr.WithMagnitude(5/SS.GW.scaleWin));
             // Draw four little crop marks, uniformly spaced (by ninety
             // degree rotations) around the point.
             int i;
@@ -641,10 +686,10 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
             for(int i = 0; i < 2; i++) {
                 Entity *e = SK.GetEntity(i == 0 ? entityA : entityB);
                 Quaternion q = e->NormalGetNum();
-                Vector n = q.RotationN().WithMagnitude(25/SS.GW.scale);
-                Vector u = q.RotationU().WithMagnitude(6/SS.GW.scale);
+                Vector n = q.RotationN().WithMagnitude(25/SS.GW.scaleWin);
+                Vector u = q.RotationU().WithMagnitude(6/SS.GW.scaleWin);
                 Vector p = SK.GetEntity(e->point[0])->PointGetNum();
-                p = p.Plus(n.WithMagnitude(10/SS.GW.scale));
+                p = p.Plus(n.WithMagnitude(10/SS.GW.scaleWin));
 
                 LineDrawOrGetDistance(p.Plus(u), p.Minus(u).Plus(n));
                 LineDrawOrGetDistance(p.Minus(u), p.Plus(u).Plus(n));
@@ -670,10 +715,10 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
             if(other) da = da.ScaledBy(-1);
 
-            DoArcForAngle(a0, da, b0, db, 
-                da.WithMagnitude(40/SS.GW.scale), &ref);
-            DoArcForAngle(c0, dc, d0, dd, 
-                dc.WithMagnitude(40/SS.GW.scale), &ref);
+            DoArcForAngle(a0, da, b0, db,
+                da.WithMagnitude(40/SS.GW.scaleWin), &ref);
+            DoArcForAngle(c0, dc, d0, dd,
+                dc.WithMagnitude(40/SS.GW.scaleWin), &ref);
 
             break;
         }
@@ -681,16 +726,16 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
         case ANGLE: {
             Entity *a = SK.GetEntity(entityA);
             Entity *b = SK.GetEntity(entityB);
-            
-            Vector a0 = a->VectorGetRefPoint();
+
+            Vector a0 = a->VectorGetRefPoint();			//RTc: Midpoint of the line
             Vector b0 = b->VectorGetRefPoint();
-            Vector da = a->VectorGetNum();
+            Vector da = a->VectorGetNum();				//RTc: Length of the line a
             Vector db = b->VectorGetNum();
             if(other) da = da.ScaledBy(-1);
 
-            Vector ref;
-            DoArcForAngle(a0, da, b0, db, disp.offset, &ref);
-            DoLabel(ref, labelPos, gr, gu);
+			Vector ref;
+			DoArcForAngle(a0, da, b0, db, disp.offset, &ref);			//Returns the reference point of the arc
+			DoLabel(ref, labelPos, gr, gu);
             break;
         }
 
@@ -713,8 +758,8 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
                     // Calculate orientation of perpendicular sign only
                     // once, so that it's the same both times it's drawn
                     u = e->VectorGetNum();
-                    u = u.WithMagnitude(16/SS.GW.scale);
-                    v = (rn.Cross(u)).WithMagnitude(16/SS.GW.scale);
+                    u = u.WithMagnitude(16/SS.GW.scaleWin);
+                    v = (rn.Cross(u)).WithMagnitude(16/SS.GW.scaleWin);
                     // a bit of bias to stop it from flickering between the
                     // two possibilities
                     if(fabs(u.Dot(ru)) < fabs(v.Dot(ru)) + LENGTH_EPS) {
@@ -742,10 +787,10 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
                 Entity *arc = SK.GetEntity(entityA);
                 Entity *norm = SK.GetEntity(arc->normal);
                 Vector c = SK.GetEntity(arc->point[0])->PointGetNum();
-                Vector p = 
+                Vector p =
                     SK.GetEntity(arc->point[other ? 2 : 1])->PointGetNum();
                 Vector r = p.Minus(c);
-                textAt = p.Plus(r.WithMagnitude(14/SS.GW.scale));
+                textAt = p.Plus(r.WithMagnitude(14/SS.GW.scaleWin));
                 u = norm->NormalU();
                 v = norm->NormalV();
             } else if(type == CUBIC_LINE_TANGENT) {
@@ -763,10 +808,10 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
                 Entity *cubic = SK.GetEntity(entityA);
                 Vector p = other ? cubic->CubicGetFinishNum() :
-                                   cubic->CubicGetStartNum();  
+                                   cubic->CubicGetStartNum();
                 Vector dir = SK.GetEntity(entityB)->VectorGetNum();
                 Vector out = n.Cross(dir);
-                textAt = p.Plus(out.WithMagnitude(14/SS.GW.scale));
+                textAt = p.Plus(out.WithMagnitude(14/SS.GW.scaleWin));
             } else {
                 Vector n, dir;
                 EntityBase *wn = SK.GetEntity(workplane)->Normal();
@@ -797,7 +842,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
                     }
                 }
                 dir = n.Cross(dir);
-                textAt = textAt.Plus(dir.WithMagnitude(14/SS.GW.scale));
+                textAt = textAt.Plus(dir.WithMagnitude(14/SS.GW.scaleWin));
             }
 
             if(dogd.drawing) {
@@ -815,8 +860,8 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
             for(int i = 0; i < 2; i++) {
                 Entity *e = SK.GetEntity(i == 0 ? entityA : entityB);
                 Vector n = e->VectorGetNum();
-                n = n.WithMagnitude(25/SS.GW.scale);
-                Vector u = (gn.Cross(n)).WithMagnitude(4/SS.GW.scale);
+                n = n.WithMagnitude(25/SS.GW.scaleWin);
+                Vector u = (gn.Cross(n)).WithMagnitude(4/SS.GW.scaleWin);
                 Vector p = e->VectorGetRefPoint();
 
                 LineDrawOrGetDistance(p.Plus(u), p.Plus(u).Plus(n));
@@ -945,11 +990,11 @@ s:
                 // they might not be in the same direction, even when the
                 // constraint is fully solved.
                 d = n.ScaledBy(d.Dot(n));
-                d = d.WithMagnitude(20/SS.GW.scale);
+                d = d.WithMagnitude(20/SS.GW.scaleWin);
                 Vector tip = tail.Plus(d);
 
                 LineDrawOrGetDistance(tail, tip);
-                d = d.WithMagnitude(9/SS.GW.scale);
+                d = d.WithMagnitude(9/SS.GW.scaleWin);
                 LineDrawOrGetDistance(tip, tip.Minus(d.RotatedAbout(gn,  0.6)));
                 LineDrawOrGetDistance(tip, tip.Minus(d.RotatedAbout(gn, -0.6)));
             }
@@ -974,7 +1019,7 @@ s:
                 Vector b = SK.GetEntity(e->point[1])->PointGetNum();
                 Vector m = (a.ScaledBy(0.5)).Plus(b.ScaledBy(0.5));
                 Vector offset = (a.Minus(b)).Cross(n);
-                offset = offset.WithMagnitude(13/SS.GW.scale);
+                offset = offset.WithMagnitude(13/SS.GW.scaleWin);
                 // Draw midpoint constraint on other side of line, so that
                 // a line can be midpoint and horizontal at same time.
                 if(type == AT_MIDPOINT) offset = offset.ScaledBy(-1);
@@ -1008,11 +1053,11 @@ s:
                     if(oo.Dot(d) < 0) d = d.ScaledBy(-1);
 
                     Vector dp = cn.Cross(d);
-                    d = d.WithMagnitude(14/SS.GW.scale);
+                    d = d.WithMagnitude(14/SS.GW.scaleWin);
                     Vector c = o.Minus(d);
                     LineDrawOrGetDistance(o, c);
-                    d = d.WithMagnitude(3/SS.GW.scale);
-                    dp = dp.WithMagnitude(2/SS.GW.scale);
+                    d = d.WithMagnitude(3/SS.GW.scaleWin);
+                    dp = dp.WithMagnitude(2/SS.GW.scaleWin);
                     if(dogd.drawing) {
                         glBegin(GL_QUADS);
                             ssglVertex3v((c.Plus(d)).Plus(dp));
@@ -1067,7 +1112,7 @@ double Constraint::GetDistance(Point2d mp) {
     dogd.dmin = 1e12;
 
     DrawOrGetDistance(NULL);
-    
+
     return dogd.dmin;
 }
 

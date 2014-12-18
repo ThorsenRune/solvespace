@@ -72,7 +72,7 @@ void TextWindow::ScreenActivateGroup(int link, uint32_t v) {//RT2014 Activate th
     g->visible = true;
     SS.GW.activeGroup.v = v;
     SK.GetGroup(SS.GW.activeGroup)->Activate();
-    SS.GW.ClearSuper();
+
 }
 void TextWindow::ReportHowGroupSolved(hGroup hg) {
     SS.GW.ClearSuper();
@@ -86,6 +86,11 @@ void TextWindow::ScreenHowGroupSolved(int link, uint32_t v) {
     }
     SS.TW.GoToScreen(SCREEN_GROUP_SOLVE_INFO);
     SS.TW.shown.group.v = v;
+}
+void TextWindow::ScreenShowOptions(int link, uint32_t v) {
+	if (0<v)
+		SS.solveOptions = (SS.solveOptions ^ v);			//Toggle the optionbit
+    SS.TW.GoToScreen(SCREEN_SHOWOPTIONS);
 }
 void TextWindow::ScreenShowConfiguration(int link, uint32_t v) {
     SS.TW.GoToScreen(SCREEN_CONFIGURATION);
@@ -151,10 +156,12 @@ void TextWindow::ShowListOfGroups(void) {
     Printf(true,  "  %Fl%Ls%fshow all%E / %Fl%Lh%fhide all%E",
         &(TextWindow::ScreenShowGroupsSpecial),
         &(TextWindow::ScreenShowGroupsSpecial));
-    Printf(true,  "  %Fl%Ls%fline styles%E /"
+    Printf(true,  " %Fl%Ls%foptions%E /"
+				   " %Fl%Ls%fline styles%E /"
                    " %Fl%Ls%fview%E /"
                    " %Fl%Ls%fconfiguration%E",
-        &(TextWindow::ScreenShowListOfStyles),
+				   &(TextWindow::ScreenShowOptions),
+				 &(TextWindow::ScreenShowListOfStyles),
         &(TextWindow::ScreenShowEditView),
         &(TextWindow::ScreenShowConfiguration));
 }
@@ -221,6 +228,7 @@ void TextWindow::ScreenChangeGroupOption(int link, uint32_t v) {
         case 'd': g->allDimsReference = !(g->allDimsReference); break;
 
         case 'f': g->forceToMesh = !(g->forceToMesh); break;
+        case 'h': g->hideConstraints= !(g->hideConstraints); break;
     }
 
     SS.MarkGroupDirty(g->h);
@@ -320,92 +328,69 @@ void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
 //RT***************************************New routines to move to adequate locations*****************************************
 int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT2014 Supplementary description of constraints
 	//Overwrite the description with named descriptions. The psNewString is the return value to call as  &oldString
-//	static char ret[1024];		//RT Static because we return this string (?!)
-	if (c->type == Constraint::EQUAL_LENGTH_LINES){
-		Request *reqA = SK.GetRequest0(c->entityA.request());
-		Request *reqB = SK.GetRequest0(c->entityB.request());
-		if ((reqA) && (reqB))
- 			sprintf(*psNewString, "%s == %s", reqA->str.str, reqB->str.str);
+ 	static char tekst[1024];		//RT temporary string storage
+
+    Request *req4EA = SK.request.FindByIdNoOops(c->entityA.request());          //RT1218 centralizing getting the Request for Entity A
+    Request *req4EB = SK.request.FindByIdNoOops(c->entityB.request());          //RT1218 centralizing getting the Request for Entity A
+    Request *req4PtA = SK.request.FindByIdNoOops(c->ptA.request());          //RT1218 centralizing getting the Request for Entity A
+    Request *req4PtB = SK.request.FindByIdNoOops(c->ptB.request());          //RT1218 centralizing getting the Request for Entity A
+
+    if (c->type == Constraint::EQUAL_LENGTH_LINES){
+        if ((req4EA) && (req4EB))
+ 			sprintf(*psNewString, "%s == %s", req4EA->str.str, req4EB->str.str);
 		return 1;
 	}
 	else if ((Constraint::PT_PT_DISTANCE) == c->type){
-		//try{
 		if (c->valA)	{		//Check if exists
-			sprintf(*psNewString, "     %s", SS.MmToString(c->valA));			//Return the reference value
+            if (req4PtA) sprintf(tekst,"%s =",req4PtA->str.str);
+			sprintf(*psNewString, " %s  %s",tekst, SS.MmToString(c->valA));			//Return the reference value
 				return 1;
 		}
-			// Should never come here
-		Error("Should never come here 313");
-			Request *reqA = SK.GetRequest0(c->ptA.request());
-			if (!(reqA))	{		//Check if exists
-				sprintf(*psNewString, "     %s",   SS.MmToString(c->valA));		//Return the reference value
-				return 1;
-			}
-			Request *reqB = SK.GetRequest0(c->ptB.request());
-			if (!(reqB))
-				return -1;
-			Vector p0 = SK.GetEntity(c->ptA)->PointGetNum();
-			Vector p1 = SK.GetEntity(c->ptB)->PointGetNum();
-			sprintf(*psNewString, "%s == %s", reqA->str.str, SS.MmToString((p1.Minus(p0).Magnitude())));
-			return 1;
-			//	}
-			//	catch (char *e) {
-			//		Error("Problem PT_PT_DISTANCE: '%s'", e);
-			//	}
+	}
+	else if ((Constraint::EQUAL_RADIUS) == c->type){		//RT1215 Revised
+		if ((req4EA)&&(req4EB))
+			sprintf(*psNewString, "diam(%s) == diam(%s)", req4EA->str.str, req4EB->str.str);
+		return 1;
 	}
 	else if ((Constraint::ANGLE) == c->type){
-		try{
-			Request *reqA = SK.GetRequest(c->entityA.request());
-			Request *reqB = SK.GetRequest(c->entityB.request());
 			Vector v0 = SK.GetEntity(c->entityA)->VectorGetNum();
 			Vector v1 = SK.GetEntity(c->entityB)->VectorGetNum();
 			v0 = v0.WithMagnitude(1);
 			v1 = v1.WithMagnitude(1);
 			double theta = acos(v0.Dot(v1));
-			sprintf(*psNewString, "ang(%s, %s) = %.2f deg", reqA->str.str, reqB->str.str, theta * 180 / PI);
+            if ((req4EA) && (req4EB))
+                sprintf(*psNewString, "ang(%s, %s) = %.2f deg", req4EA->str.str, req4EB->str.str, theta * 180 / PI);
 			return 1;
-		}
-		catch (char *e) {
-			Error("Problem PT_PT_DISTANCE: '%s'", e);
-		}
-	}
-	else if ((Constraint::EQUAL_RADIUS) == c->type){		//RT1215 Revised
-		Entity *eA = SK.GetEntityNoOops(c->entityA);
-		if (eA == NULL) Request *eA = SK.GetRequest(c->entityA.request());
-		Entity *eB = SK.GetEntityNoOops(c->entityB);
-		if (eB == NULL) Request *eB = SK.GetRequest(c->entityB.request());
-		if ((eA)&&(eB))
-			sprintf(*psNewString, "diam(%s) == diam(%s)", eA->str.str, eB->str.str);
-		return 1;
+
 	}
 	else if ((Constraint::EQUAL_LINE_ARC_LEN) == c->type){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		Request *reqB = SK.GetRequest(c->entityB.request());
-		if (Request::ARC_OF_CIRCLE == reqB->type){
-			sprintf(*psNewString, "%s == (arc)%s", reqA->str.str, reqB->str.str);
+		if (Request::ARC_OF_CIRCLE == req4EA->type){
+			sprintf(*psNewString, "arclen(%s)s == %s", req4EA->str.str, req4EB->str.str);
 		}
 		else
-			sprintf(*psNewString, "(arc)%s == %s", reqA->str.str, reqB->str.str);
+			sprintf(*psNewString, "%s ==arclen(%s)", req4EA->str.str, req4EB->str.str);
 		return 1;
 	}
 	else if ((Constraint::PT_ON_LINE) == c->type){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		sprintf(*psNewString, "pt X %s", reqA->str.str );
+		if ((req4EA))
+		sprintf(*psNewString, "pt on %s", req4EA->str.str );
 	}
 	else if ((Constraint::PT_ON_CIRCLE) == c->type){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		sprintf(*psNewString, "pt X %s", reqA->str.str );
+		if ((req4EA))
+		sprintf(*psNewString, "pt on %s", req4EA->str.str );
 	}
  	else if ((Constraint::HORIZONTAL) == c->type){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		sprintf(*psNewString, "%s Horiz ", reqA->str.str);
+		if (req4EA)
+		sprintf(*psNewString, "%s Horiz ", req4EA->str.str);
 	}
 	else if ((Constraint::VERTICAL) == c->type){
-		Request *reqA = SK.GetRequest(c->entityA.request());
-		sprintf(*psNewString, "%s VERT", reqA->str.str);
+		if (req4EA)
+		sprintf(*psNewString, "%s VERT", req4EA->str.str);
 	}
 	else if ((Constraint::POINTS_COINCIDENT) == c->type) return 1;
 	else if ((Constraint::COMMENT) == c->type) return 1;
+
+
 return 0;				//No change
 }
 //RT*****************************   END OF New code *******************************
@@ -464,7 +449,7 @@ void TextWindow::ShowGroupInfo(void) {
                 times, times == 1 ? "" : "s",
                 g->h.v, &TextWindow::ScreenChangeExprA);
         }
-    } else if(g->type == Group::IMPORTED) {								//RT14126	set 3D scaling
+    } else if(g->type == Group::IMPORTED) {
         Printf(true, " %Ftimport geometry from file%E");
 		Printf(false, "%Ba   '%s'    %Fl%Ll%f%D[Edit]%E", g->impFileRel, &TextWindow::editImportFileNameRT, 0);
         Printf(false, "%Bd   %Ftscaled by%E   %Fl%La%f%D[Uniform]%E",       &TextWindow::ScreenChangeGroupScale, g->h.v); //Make uniform scaling using x
@@ -529,6 +514,11 @@ void TextWindow::ShowGroupInfo(void) {
         &TextWindow::ScreenChangeGroupOption,
         g->visible ? CHECK_TRUE : CHECK_FALSE);
 
+if (SS.revisionUnlockKey & REV1RT){
+        Printf(false, " %f%Lh%Fd%c  hide constraints in this group",
+        &TextWindow::ScreenChangeGroupOption,
+        g->hideConstraints ? CHECK_TRUE : CHECK_FALSE);
+}
     Group *pg; pg = g->PreviousGroup();
     if(pg && pg->runningMesh.IsEmpty() && g->thisMesh.IsEmpty()) {
         Printf(false, " %f%Lf%Fd%c  force NURBS surfaces to triangle mesh",
@@ -690,6 +680,8 @@ void TextWindow::ScreenStepDimGo(int link, uint32_t v) {
     InvalidateGraphics();
     SS.TW.GoToScreen(SCREEN_LIST_OF_GROUPS);
 }
+
+
 void TextWindow::ShowStepDimension(void) {
     Constraint *c = SK.constraint.FindByIdNoOops(shown.constraint);
     if(!c) {
@@ -864,6 +856,30 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_TTF_TEXT: {
+            //RT1217
+            if (1216==SS.TW.edit.editAction){
+                SS.TW.edit.editAction=0;
+                SS.UndoRemember();      //? Will it include the change?
+                Constraint* c1 = SK.constraint.getByUId(edit.UId);
+                if(c1) {        //Be sure it exist
+                    c1->comment.strcpy(s);
+                    SS.MarkGroupDirty(c1->group);
+                    SS.later.generateAll = true;
+                  }
+                  break;
+                }
+            if (1217==SS.TW.edit.editAction){
+                SS.TW.edit.editAction=0;
+                SS.UndoRemember();      //? Will it include the change?
+                Request* r1 = SK.request.getByUId(edit.UId);
+                if(r1) {        //Be sure it exist
+                    r1->str.strcpy(s);
+                    SS.MarkGroupDirty(r1->group);
+                    SS.later.generateAll = true;
+                  }
+                  break;
+                }
+            //RT1217 end
             SS.UndoRemember();
             Request *r = SK.request.FindByIdNoOops(edit.request);
             if(r) {
@@ -886,7 +902,7 @@ void TextWindow::EditControlDone(const char *s) {
             break;
         }
         case EDIT_STEP_DIM_STEPS:
-            shown.dimSteps = min(300, max(1, atoi(s)));
+            shown.dimSteps = min(600, max(1, atoi(s)));
             break;
 
         case EDIT_TANGENT_ARC_RADIUS: {

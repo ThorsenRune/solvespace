@@ -4,6 +4,19 @@
 //
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
+/*	Revision history
+//RT(ver)	New code by Rune Thorsen
+//RTc:   Comment to original code by RT (these may need verification)
+RT: as far as possible we want to keep the original code intact with conditional
+	calls to modifying methods based upon 'revisionUnlockKey' bitcombinations eg.
+	revisionUnlockKey&&((REV1RT||REV2RT))	: enable 1&2 revision modifications
+
+
+
+
+
+*/
+
 #include "solvespace.h"
 
 SolveSpace SS;
@@ -83,10 +96,10 @@ void SolveSpace::Init(char *cmdLine) {
     // Show toolbar in the graphics window
     showToolbar = CnfThawBool(true, "ShowToolbar");
 	copyConstraints = CnfThawBool(false, "CopyConstraints");
-	solveOptions =		CnfThawInt(false, "solveOptions");
-	revisionUnlockKey = CnfThawInt(false, "revisionUnlockKey");
-	SS.revisionUnlockKey = 0x01;						//RT Set first revion flag, todo: make a menu and let user select the level
-    // Recent files menus
+	solveOptions =		CnfThawInt(SOLVER_FINDBAD, "solveOptions");
+	revisionUnlockKey = CnfThawInt(REV1RT, "revisionUnlockKey");
+	 					//RT Set first revion flag, todo: make a menu and let user select the level
+	renderDetailWhenSaving = CnfThawFloat(2.0f , "renderDetailWhenSaving");    // Recent files menus
     for(i = 0; i < MAX_RECENT; i++) {
         char name[100];
         sprintf(name, "RecentFile_%d", i);
@@ -187,15 +200,38 @@ void SolveSpace::Exit(void) {
 	CnfFreezeBool(copyConstraints, "CopyConstraints");
 	CnfFreezeInt(solveOptions, "solveOptions");
 	CnfFreezeInt(revisionUnlockKey, "revisionUnlockKey");			//
+	CnfFreezeFloat((float) renderDetailWhenSaving, "renderDetailWhenSaving");
     // And the default styles, colors and line widths and such.
     Style::FreezeDefaultStyles();
 
     ExitNow();
 }
 
+void doDirectCommands_RT(int pendingUserCommand){	//RT Process extra commands
+//	doubleclick an entity will activate that group
+	Entity *e = NULL;
+	if (pendingUserCommand == 0)return;				//Proceed only if there is a command
+	if (SS.GW.gs.n == 1 && (SS.GW.gs.points == 1 || SS.GW.gs.entities == 1)) {
+		e = SK.GetEntity(SS.GW.gs.points == 1 ? SS.GW.gs.point[0] : SS.GW.gs.entity[0]);
+		if (!(e)) Error("Debug here please: ref 3144");	//Debug- how to ensure a valid entity?
+	Group *g = SK.GetGroup(e->group);
+	if (SS.pendingUserCommand == 3142){
+        SS.pendingUserCommand =0;			//command taken
+		if (!(g->h.v)) Error("Debug here please: ref 3142");
+			TextWindow::ScreenActivateGroup(0, g->h.v);	//Activate group
+		}
+	}
+}
+
+
 void SolveSpace::DoLater(void) {
+	if (SS.solveOptions &  SELECTION_TOGGLEMODE){
+		doDirectCommands_RT(SS.pendingUserCommand);
+
+	}
     if(later.generateAll) GenerateAll();
-    if(later.showTW) TW.Show();
+    if(later.showTW)
+		TW.Show();
     ZERO(&later);
 }
 
@@ -235,7 +271,7 @@ double SolveSpace::StringToMm(const char *str) {
     return atof(str) * MmPerUnit();
 }
 double SolveSpace::ChordTolMm(void) {
-    return SS.chordTol / SS.GW.scale;
+    return SS.chordTol / SS.GW.scaleWin;
 }
 int SolveSpace::UnitDigitsAfterDecimal(void) {
     return (viewUnits == UNIT_INCHES) ? afterDecimalInch : afterDecimalMm;
@@ -357,6 +393,7 @@ bool SolveSpace::OkayToStartNewFile(void) {
 
         default: ERRMSG_RT(); break;
     }
+	return false;		//RT just satisfying the compiler with an exit point
 }
 
 void SolveSpace::UpdateWindowTitle(void) {
@@ -368,8 +405,8 @@ void SolveSpace::UpdateWindowTitle(void) {
         SetWindowTitle(buf);
     }
 }
-char exportFileLast[MAX_PATH] = "";								//RT:Remember the last export filename  
-int exportMenuLast = GraphicsWindow::MNU_EXPORT_MESH;							//RT:Remember the last export menu  
+char exportFileLast[MAX_PATH] = "";								//RT:Remember the last export filename
+int exportMenuLast = GraphicsWindow::MNU_EXPORT_MESH;							//RT:Remember the last export menu
 void SolveSpace::MenuFile(int id) {
     if(id >= RECENT_OPEN && id < (RECENT_OPEN+MAX_RECENT)) {
         if(!SS.OkayToStartNewFile()) return;
@@ -387,7 +424,7 @@ void SolveSpace::MenuFile(int id) {
         SS.AfterNewFile();
         return;
     }
-	if (id == GraphicsWindow::MNU_EXPORT_AGAIN) 	id = exportMenuLast; 
+	if (id == GraphicsWindow::MNU_EXPORT_AGAIN) 	id = exportMenuLast;
     switch(id) {
         case GraphicsWindow::MNU_NEW:
             if(!SS.OkayToStartNewFile()) break;
@@ -504,9 +541,10 @@ void SolveSpace::MenuAnalyze(int id) {
         case GraphicsWindow::MNU_STEP_DIM:
             if(gs.constraints == 1 && gs.n == 0) {
                 Constraint *c = SK.GetConstraint(gs.constraint[0]);
+                c->reference=false;
                 if(c->HasLabel() && !c->reference) {
                     SS.TW.shown.dimFinish = c->valA;
-                    SS.TW.shown.dimSteps = 10;
+                    SS.TW.shown.dimSteps = 300;
                     SS.TW.shown.dimIsDistance =
                         (c->type != Constraint::ANGLE) &&
                         (c->type != Constraint::LENGTH_RATIO);
@@ -736,8 +774,8 @@ void SolveSpace::MenuHelp(int id) {
         case GraphicsWindow::MNU_ABOUT:
             Message(
 "This is SolveSpace version  2.1eMVe8-RT1.1\n"
-"RT1:UI Modifications - change group by PGUP/DWN keys. Inverted Deletion logic\n"
-"Naming entities and constraints"
+"RT1:UI Modifications - change group by PGUP/DWN keys. Navigation logic\n"
+"Naming entities and constraints, Fixed resolution when saving etc."
 "\n"
 "Built " __TIME__ " " __DATE__ ".\n"
 "\n"

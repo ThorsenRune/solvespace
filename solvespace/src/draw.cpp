@@ -55,7 +55,7 @@ void GraphicsWindow::Selection::Draw(void) {
         // We want to emphasize this constraint or entity, by drawing a thick
         // line from the top left corner of the screen to the reference point
         // of that entity or constraint.
-        double s = 0.501/SS.GW.scale;
+        double s = 0.501/SS.GW.scaleWin;
         Vector topLeft =       SS.GW.projRight.ScaledBy(-SS.GW.width*s);
         topLeft = topLeft.Plus(SS.GW.projUp.ScaledBy(SS.GW.height*s));
         topLeft = topLeft.Minus(SS.GW.offset);
@@ -171,8 +171,18 @@ void GraphicsWindow::MakeSelected(hEntity he) {
 }
 void GraphicsWindow::MakeSelected(Selection *stog) {
     if(stog->IsEmpty()) return;
-    if(IsSelected(stog)) return;
-
+	if (SS.solveOptions & SELECTION_TOGGLEMODE){	//RT1217: If already selected then remove it from selection (toggle select)
+		Selection *s;
+		for (s = selection.First(); s; s = selection.NextAfter(s)) {
+			if (s->Equals(stog)){	//Element found
+				s->tag = 1;
+				selection.RemoveTagged();
+				return;							//Remove already selected and exit
+			}
+		}
+	}
+	else
+		if(IsSelected(stog)) return;				//RTc, the above sort of replaces this
     if(stog->entity.v != 0 && SK.GetEntity(stog->entity)->IsFace()) {
         // In the interest of speed for the triangle drawing code,
         // only two faces may be selected at a time.
@@ -188,7 +198,6 @@ void GraphicsWindow::MakeSelected(Selection *stog) {
         }
         selection.RemoveTagged();
     }
-
     selection.Add(stog);
 }
 
@@ -340,7 +349,8 @@ void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
             if(r->extraPoints < 2) continue;
             if(e->h.v != r->h.entity(1).v) continue;
         }
-
+		if (e == NULL)
+			DEBUGPLEASE("Debug here");
         d = e->GetDistance(mp);
         if(d < 10 && d < dmin) {
             memset(&s, 0, sizeof(s));
@@ -395,7 +405,7 @@ Point2d GraphicsWindow::ProjectPoint(Vector p) {
 Vector GraphicsWindow::ProjectPoint3(Vector p) {
     double w;
     Vector r = ProjectPoint4(p, &w);
-    return r.ScaledBy(scale/w);
+    return r.ScaledBy(scaleWin/w);
 }
 //-----------------------------------------------------------------------------
 // Project a point in model space halfway into screen space. The scale is
@@ -410,7 +420,7 @@ Vector GraphicsWindow::ProjectPoint4(Vector p, double *w) {
     r.y = p.Dot(projUp);
     r.z = p.Dot(projUp.Cross(projRight));
 
-    *w = 1 + r.z*SS.CameraTangent()*scale;
+    *w = 1 + r.z*SS.CameraTangent()*scaleWin;
     return r;
 }
 
@@ -425,8 +435,8 @@ Vector GraphicsWindow::UnProjectPoint(Point2d p) {
     // point has the same component normal to the screen as the offset, it
     // will have z = 0 after the rotation is applied, thus w = 1. So this is
     // correct.
-    orig = orig.Plus(projRight.ScaledBy(p.x / scale)).Plus(
-                     projUp.   ScaledBy(p.y / scale));
+    orig = orig.Plus(projRight.ScaledBy(p.x / scaleWin)).Plus(
+                     projUp.   ScaledBy(p.y / scaleWin));
     return orig;
 }
 
@@ -465,14 +475,14 @@ void GraphicsWindow::Paint(void) {
     width = w; height = h;
     glViewport(0, 0, w, h);
 
-    glMatrixMode(GL_PROJECTION); 
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    glScaled(scale*2.0/w, scale*2.0/h, scale*1.0/30000);
+    glScaled(scaleWin*2.0/w, scaleWin*2.0/h, scaleWin*1.0/30000);
 
     double mat[16];
     // Last thing before display is to apply the perspective
-    double clp = SS.CameraTangent()*scale;
+    double clp = SS.CameraTangent()*scaleWin;
     MakeMatrix(mat, 1,              0,              0,              0,
                     0,              1,              0,              0,
                     0,              0,              1,              0,
@@ -492,7 +502,7 @@ void GraphicsWindow::Paint(void) {
                     0,              0,              0,              1);
     glMultMatrixd(mat);
 
-    glMatrixMode(GL_MODELVIEW); 
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
     glShadeModel(GL_SMOOTH);
@@ -504,10 +514,10 @@ void GraphicsWindow::Paint(void) {
     // drawn with leaks in the mesh
     glEnable(GL_POLYGON_OFFSET_LINE);
     glEnable(GL_POLYGON_OFFSET_FILL);
-    glEnable(GL_DEPTH_TEST); 
+    glEnable(GL_DEPTH_TEST);
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     glEnable(GL_NORMALIZE);
-   
+
     // At the same depth, we want later lines drawn over earlier.
     glDepthFunc(GL_LEQUAL);
 
@@ -522,9 +532,9 @@ void GraphicsWindow::Paint(void) {
         // And show the text window, which has info to debug it
         ForceTextWindowShown();
     }
-    glClear(GL_COLOR_BUFFER_BIT); 
-    glClearDepth(1.0); 
-    glClear(GL_DEPTH_BUFFER_BIT); 
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearDepth(1.0);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
     if(SS.bgImage.fromFile) {
         // If a background image is loaded, then we draw it now as a texture.
@@ -631,18 +641,18 @@ void GraphicsWindow::Paint(void) {
 
         double g = SS.gridSpacing;
 
-        double umin = VERY_POSITIVE, umax = VERY_NEGATIVE, 
+        double umin = VERY_POSITIVE, umax = VERY_NEGATIVE,
                vmin = VERY_POSITIVE, vmax = VERY_NEGATIVE;
         int a;
         for(a = 0; a < 4; a++) {
             // Ideally, we would just do +/- half the width and height; but
             // allow some extra slop for rounding.
-            Vector horiz = projRight.ScaledBy((0.6*width)/scale  + 2*g),
-                   vert  = projUp.   ScaledBy((0.6*height)/scale + 2*g);
+            Vector horiz = projRight.ScaledBy((0.6*width)/scaleWin  + 2*g),
+                   vert  = projUp.   ScaledBy((0.6*height)/scaleWin + 2*g);
             if(a == 2 || a == 3) horiz = horiz.ScaledBy(-1);
             if(a == 1 || a == 3) vert  = vert. ScaledBy(-1);
             Vector tp = horiz.Plus(vert).Minus(offset);
-          
+
             // Project the point into our grid plane, normal to the screen
             // (not to the grid plane). If the plane is on edge then this is
             // impossible so don't try to draw the grid.
@@ -684,11 +694,11 @@ void GraphicsWindow::Paint(void) {
             ssglVertex3v(wp.Plus(wu.ScaledBy(i0*g)).Plus(wv.ScaledBy(j*g)));
             ssglVertex3v(wp.Plus(wu.ScaledBy(i1*g)).Plus(wv.ScaledBy(j*g)));
         }
-        glEnd(); 
+        glEnd();
 
         // Clear the depth buffer, so that the grid is at the very back of
         // the Z order.
-        glClear(GL_DEPTH_BUFFER_BIT); 
+        glClear(GL_DEPTH_BUFFER_BIT);
 nogrid:;
     }
 
@@ -733,7 +743,7 @@ nogrid:;
     ssglDrawEdges(&(SS.nakedEdges), true);
 
     // Then redraw whatever the mouse is hovering over, highlighted.
-    glDisable(GL_DEPTH_TEST); 
+    glDisable(GL_DEPTH_TEST);
     ssglLockColorTo(Style::Color(Style::HOVERED));
     hover.Draw();
 
@@ -796,20 +806,20 @@ nogrid:;
 
         glLineWidth(1.5);
         glBegin(GL_LINES);
-            ssglVertex3v(p.Plus(u.WithMagnitude(-15/scale)));
-            ssglVertex3v(p.Plus(u.WithMagnitude(30/scale)));
-            ssglVertex3v(p.Plus(v.WithMagnitude(-15/scale)));
-            ssglVertex3v(p.Plus(v.WithMagnitude(30/scale)));
+            ssglVertex3v(p.Plus(u.WithMagnitude(-15/scaleWin)));
+            ssglVertex3v(p.Plus(u.WithMagnitude(30/scaleWin)));
+            ssglVertex3v(p.Plus(v.WithMagnitude(-15/scaleWin)));
+            ssglVertex3v(p.Plus(v.WithMagnitude(30/scaleWin)));
         glEnd();
 
         ssglWriteText("(x, y) = (0, 0) for file just exported",
             DEFAULT_TEXT_HEIGHT,
-            p.Plus(u.ScaledBy(10/scale)).Plus(v.ScaledBy(10/scale)), 
+            p.Plus(u.ScaledBy(10/scaleWin)).Plus(v.ScaledBy(10/scaleWin)),
             u, v, NULL, NULL);
         ssglWriteText("press Esc to clear this message",
             DEFAULT_TEXT_HEIGHT,
-            p.Plus(u.ScaledBy(40/scale)).Plus(
-                   v.ScaledBy(-(DEFAULT_TEXT_HEIGHT)/scale)), 
+            p.Plus(u.ScaledBy(40/scaleWin)).Plus(
+                   v.ScaledBy(-(DEFAULT_TEXT_HEIGHT)/scaleWin)),
             u, v, NULL, NULL);
     }
 

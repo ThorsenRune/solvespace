@@ -109,7 +109,8 @@ public:
         SCREEN_STYLE_INFO          = 6,
         SCREEN_PASTE_TRANSFORMED   = 7,
         SCREEN_EDIT_VIEW           = 8,
-        SCREEN_TANGENT_ARC         = 9
+        SCREEN_TANGENT_ARC         = 9,
+		SCREEN_SHOWOPTIONS									//RT1217
     };
     typedef struct {
         int         screen;
@@ -119,8 +120,8 @@ public:
 
         hConstraint constraint;
         bool        dimIsDistance;
-        double      dimFinish;
-        int         dimSteps;
+        double      dimFinish;              //Step dimension stop
+        int         dimSteps;               //Step dimension stepsize
 
         struct {
             int         times;
@@ -179,15 +180,20 @@ public:
         EDIT_VIEW_PROJ_RIGHT       = 702,
         EDIT_VIEW_PROJ_UP          = 703,
         // For tangent arc
-        EDIT_TANGENT_ARC_RADIUS    = 800
+        EDIT_TANGENT_ARC_RADIUS    = 800,
+		//RT New stuff
+		EDIT_RENDERDETAIL
+		//RT End of new stuff
     };
     struct {
         bool        showAgain;
-        int         meaning;
+        int         meaning;        //RTc: Definition of the action to take after editing a textbox
         int         i;
         hGroup      group;
         hRequest    request;
         hStyle      style;
+        uint32_t    editAction;      //RT1216: Extra to meaning. Determines the action to take after new input in textbox
+        uint32_t     UId;            //RT1216: Unique ID   considering substituting the handle thing with a simple 32 bit unique ID
     } edit;
 
     static void ReportHowGroupSolved(hGroup hg);
@@ -218,6 +224,7 @@ public:
     void ShowGroupInfo(void);
     void ShowGroupSolveInfo(void);
     void ShowConfiguration(void);
+	void ShowOptions(void);				//RT1217		Options screen
     void ShowListOfStyles(void);
     void ShowStyleInfo(void);
     void ShowStepDimension(void);
@@ -233,6 +240,7 @@ public:
     // All of these are callbacks from the GUI code; first from when
     // we're describing an entity
     static void ScreenEditTtfText(int link, uint32_t v);
+   static void  ScreenEditTextRT(int link, uint32_t v);                 //RT1216 more generic text input handler
     static void ScreenSetTtfFont(int link, uint32_t v);
     static void ScreenUnselectAll(int link, uint32_t v);
 
@@ -243,7 +251,7 @@ public:
     static void ScreenHowGroupSolved(int link, uint32_t v);
     static void ScreenShowGroupsSpecial(int link, uint32_t v);
     static void ScreenDeleteGroup(int link, uint32_t v);
-	
+
 	int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString);    //RT2014 Supplementary description of constraints
 
     static void ScreenHoverConstraint(int link, uint32_t v);
@@ -263,6 +271,7 @@ public:
     static void ScreenAssignSelectionToStyle(int link, uint32_t v);
     static void ScreenBackgroundImage(int link, uint32_t v);
 
+	static void ScreenShowOptions(int link, uint32_t v);
     static void ScreenShowConfiguration(int link, uint32_t v);
     static void ScreenShowEditView(int link, uint32_t v);
     static void ScreenGoToWebsite(int link, uint32_t v);
@@ -284,7 +293,9 @@ public:
     static void ScreenPasteTransformed(int link, uint32_t v);
 
     static void ScreenHome(int link, uint32_t v);
-
+	//RT2014 new features, changeing includefile
+	static void editImportFileNameRT(int link, uint32_t v);			//Select another import file (also usefull when path has changed)
+	static void ChangeRenderDetailWhenSaving(int link, uint32_t v);	//Change the rendering detail when saving
     // These ones do stuff with the edit control
     static void ScreenChangeExprA(int link, uint32_t v);
     static void ScreenChangeGroupName(int link, uint32_t v);
@@ -465,7 +476,7 @@ public:
     Vector  offset;
     Vector  projRight;
     Vector  projUp;
-    double  scale;
+    double  scaleWin;                  //RTc: zoom level of the graphics window
     struct {
         bool    mouseDown;
         Vector  offset;

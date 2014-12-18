@@ -182,9 +182,9 @@ const SolveSpace::SaveTable SolveSpace::SAVED[] = {
     { 'c',  "Constraint.other2",        'b',    &(SS.sv.c.other2)             },
     { 'c',  "Constraint.reference",     'b',    &(SS.sv.c.reference)          },
     { 'c',  "Constraint.comment",       'N',    &(SS.sv.c.comment)            },
-    { 'c',  "Constraint.disp.offset.x", 'f',    &(SS.sv.c.disp.offset.x)      },		
-	{ 'c', "Constraint.disp.offset.y",	'f',	&(SS.sv.c.disp.offset.y)		},		 
-	{ 'c', "Constraint.disp.offset.z",	'f',	&(SS.sv.c.disp.offset.z)		},		 
+    { 'c',  "Constraint.disp.offset.x", 'f',    &(SS.sv.c.disp.offset.x)      },
+	{ 'c', "Constraint.disp.offset.y",	'f',	&(SS.sv.c.disp.offset.y)		},
+	{ 'c', "Constraint.disp.offset.z",	'f',	&(SS.sv.c.disp.offset.z)		},
     { 'c',  "Constraint.disp.style",    'x',    &(SS.sv.c.disp.style)         },
 
     { 's',  "Style.h.v",                'x',    &(SS.sv.s.h.v)                },
@@ -215,6 +215,7 @@ union SAVEDptr {
     uint32_t x;							//RTc: value of ..
 };
 
+int unique = 0;
 void SolveSpace::SaveUsingTable(int type) {
     int i;
     for(i = 0; SAVED[i].type != 0; i++) {
@@ -223,6 +224,7 @@ void SolveSpace::SaveUsingTable(int type) {
         int fmt = SAVED[i].fmt;
         // the following will set a pointer p according to the type lookup in SAVED e.g. &(SS.sv.g.opA.v) if type = "Group.opA.v"
         union SAVEDptr *p = (union SAVEDptr *)SAVED[i].ptr;
+//		if (fmt == 'N' && p->N.str[0] == '\0')   			sprintf(p->N.str, "%s %d", SAVED[i].desc, unique++);	//RT if string is zero give it an ID
         // Any items that aren't specified are assumed to be zero
         if(fmt == 'N' && p->N.str[0] == '\0')   continue;
         if(fmt == 'd' && p->d == 0)             continue;
@@ -403,7 +405,7 @@ void SolveSpace::LoadUsingTable(char *key, char *val) {	//RTc:A read line has be
                     p->c = RgbColor::FromPackedInt(u);
                     break;
 
-                case 'P':
+                case 'P':                           //RTc	a filename
                     if(strlen(val)+1 < MAX_PATH) strcpy(&(p->P), val);
                     break;
 
@@ -472,7 +474,7 @@ bool SolveSpace::LoadFromFile(char *filename) {
             char *key = line, *val = e+1;
             LoadUsingTable(key, val);
         } else if(strcmp(line, "AddGroup")==0) {//RTc: addgroup command?
-            SK.group.Add(&(sv.g));
+            SK.group.Add(&(sv.g));              //RTc: 'memory move' the group into the list of groups
             ZERO(&(sv.g));
             sv.g.scaleImp = 1; // default is 1, not 0; so legacy files need this
             sv.g.scaleImported.setSame(1.0);

@@ -10,16 +10,48 @@ void TextWindow::ScreenUnselectAll(int link, uint32_t v) {
     GraphicsWindow::MenuEdit(GraphicsWindow::MNU_UNSELECT_ALL);
 }
 
-void TextWindow::ScreenEditTtfText(int link, uint32_t v) {
+void TextWindow::ScreenEditTtfText(int link, uint32_t v) {          //RTc user has activated the edit link
     hRequest hr = { v };
-    Request *r = SK.GetRequest(hr);
+	Request *r;
+	if (SS.revisionUnlockKey && REV1RT){					//RT No crash code
 
+
+		r = SK.GetRequest0(hr);						//Get the request
+		if (r == NULL) {
+			Error("Error in 'ScreenEditTtfText' caused by invalid handle to inexistent Request element");
+			return;				//RT: Why let it crash here
+		}
+	}
+	else{
+		r = SK.GetRequest(hr);				//RTc: Original code, die on null pointer
+	}
     SS.TW.ShowEditControl(13, 10, r->str.str);
-
 	SS.TW.edit.meaning = EDIT_TTF_TEXT;
     SS.TW.edit.request = hr;
 }
-
+//RT New code
+void TextWindow::ScreenEditTextRT(int link, uint32_t v) {          //RTc user has activated the edit
+    SS.TW.edit.UId = 0;
+    SS.TW.edit.meaning = EDIT_TTF_TEXT;
+    if (link=='c'){                                 //Format for Print Lc%f%D link=c f=this function D=v identifier
+        hConstraint h = { v };
+        Constraint* c1 = SK.constraint.FindByIdNoOops(h);
+        if (c1) {
+            SS.TW.ShowEditControl(14, 10, c1->comment.str);
+            SS.TW.edit.editAction=1216;         //RT to be substituted by a enumeration constant EDIT_CONSTRAINTNAME
+            SS.TW.edit.UId = v;
+        }
+    }
+    else if (link!='c') {                       //Message("other link sent ");
+        Request* r1 = SK.request.getByUId(v);
+        if (r1) {
+            SS.TW.ShowEditControl(13, 10, r1->str.str);
+            SS.TW.edit.editAction=1217;
+            SS.TW.edit.UId = v;
+        }
+    }
+}
+//RT End code
 
 #define gs (SS.GW.gs)
 void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
@@ -35,7 +67,7 @@ void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
 
     Request *r = SK.request.FindByIdNoOops(e->h.request());
     if(!r) return;
-   
+
     SS.UndoRemember();
     r->font.strcpy(SS.fonts.l.elem[i].FontFileBaseName());
     SS.MarkGroupDirty(r->group);
@@ -44,11 +76,26 @@ void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
 }
 //RT START PROTOTYPE CODE
 void TextWindow::txtEntityDescription_RT(Entity * e){
-	// This adds an edit name link to the elements
-	if (!(e->h.isFromRequest())) return;	//Only process drawing elements
-	if (e->type == Entity::LINE_SEGMENT){
+	Request* req1 = NULL;
+// This adds an edit name link to the elements
+	if ((e->h.isFromRequest()))	{		//The Entity is constructed therefore volatile, get the request that generates it
+		req1 = SK.request.FindByIdNoOops(e->h.request());
+		if (!(req1)) Error("Err:1216 expected request");		//RT Now we should have the request
+		if (req1->type == Request::LINE_SEGMENT){
+			//RT Let user edit the segment name
+			if (*req1->str.str == '\0') {		//RT Make sure that line has a name
+				sprintf(req1->str.str, "L%d", req1->h.v);	//RT Use handle number as identifier
+			}
+			Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+				req1->str.str, &TextWindow::ScreenEditTtfText, req1->h);
+			return;
+		}
+	}
+	// No request has been found
+	if (e->type == Entity::LINE_SEGMENT){ //These are to be rewritten
 		//RT Let user edit the segment name
 		Request *rLn1 = SK.GetRequest0(e->h.request());
+		if (e->h.isFromRequest()==false) return;
 		if (!rLn1) ERRMSG_RT();
 		if (*rLn1->str.str == '\0') {		//RT Make sure that line has a name
 			sprintf(rLn1->str.str, "L%d", rLn1->h.v);	//RT Use handle number as identifier
@@ -70,7 +117,29 @@ void TextWindow::txtEntityDescription_RT(Entity * e){
 				sprintf(rLn1->str.str, "A%d", rLn1->h.v);	//RT Use handle number as identifier
 			}
 			TextWindow::Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
-				rLn1->str.str, &TextWindow::ScreenEditTtfText, e->h.request());
+				rLn1->str.str, &TextWindow::ScreenEditTextRT, e->h.request());
+	}
+	else if (e->type == Entity::CIRCLE){
+		Request *rLn1 = SK.GetRequest0(e->h.request());
+		if (rLn1 == NULL) {												// It its not a request then get it by its name
+			Request* req1 = Request::getRequestByName(e->str.str);
+			if (req1 == NULL)
+				TextWindow::Printf(false, "'%Fi%s",					e->str.str);
+			else
+				TextWindow::Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+					req1->str.str, &TextWindow::ScreenEditTtfText, req1->h.v);
+		}
+		else
+		{
+		if (*rLn1->str.str == '\0') {		//RT Make sure that line has a name
+			sprintf(rLn1->str.str, "C%d", rLn1->h.v);	//RT Use handle number as identifier
+			}
+			TextWindow::Printf(false, "'%Fi%s%E' %Fl%Ll%f%D[Edit]%E",
+			rLn1->str.str, &TextWindow::ScreenEditTtfText, e->h.request());
+		}
+	}
+	else if (e->type == Entity::WORKPLANE){
+		//?! The workplane cannot return request
 	}
 }
 //RT  ************************END of prototyping code*************************************************
@@ -96,7 +165,9 @@ void TextWindow::DescribeSelection(void) {
             case Entity::POINT_N_COPY:
             case Entity::POINT_N_ROT_AA:
                 p = e->PointGetNum();
-                Printf(false, "%FtPOINT%E at " PT_AS_STR, COSTR(p));
+				Printf(false, "%FtPOINT%E at " PT_AS_STR, COSTR(p));
+				if (SS.revisionUnlockKey && REV1RT)
+					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 break;
 
             case Entity::NORMAL_IN_3D:
@@ -117,7 +188,9 @@ void TextWindow::DescribeSelection(void) {
             case Entity::WORKPLANE: {
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(false, "%FtWORKPLANE%E");
-                Printf(true, "   origin = " PT_AS_STR, COSTR(p));
+				if (SS.revisionUnlockKey && REV1RT)
+					txtEntityDescription_RT(e);	//RT Let user edit the segment name
+				Printf(true, "   origin = " PT_AS_STR, COSTR(p));
                 Quaternion q = e->Normal()->NormalGetNum();
                 p = q.RotationN();
                 Printf(true, "   normal = " PT_AS_NUM, CO(p));
@@ -125,10 +198,10 @@ void TextWindow::DescribeSelection(void) {
             }
 			// Entity e == SK.GetEntity selection
 			case Entity::LINE_SEGMENT: {		//RT e->type==LINE_SEGMENT
-				Vector p0 = SK.GetEntity(e->point[0])->PointGetNum();
+			Vector p0 = SK.GetEntity(e->point[0])->PointGetNum();
 				p = p0;
 				Printf(false, "%FtLINE SEGMENT%E");
-				if (SS.revisionUnlockKey && 0x1)
+				if (SS.revisionUnlockKey && REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 Printf(true,  "   thru " PT_AS_STR, COSTR(p));
                 Vector p1 = SK.GetEntity(e->point[1])->PointGetNum();
@@ -159,7 +232,7 @@ void TextWindow::DescribeSelection(void) {
 
             case Entity::ARC_OF_CIRCLE: {
                 Printf(false, "%FtARC OF A CIRCLE%E");
-				if (SS.revisionUnlockKey && 0x1)
+				if (SS.revisionUnlockKey && REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
@@ -177,7 +250,7 @@ void TextWindow::DescribeSelection(void) {
             }
             case Entity::CIRCLE: {
                 Printf(false, "%FtCIRCLE%E");
-				if (SS.revisionUnlockKey && 0x1)
+				if (SS.revisionUnlockKey && REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
@@ -236,7 +309,7 @@ void TextWindow::DescribeSelection(void) {
         Printf(false, "");
         Printf(false, "%FtIN GROUP%E      %s", g->DescriptionString());
         if(e->workplane.v == Entity::FREE_IN_3D.v) {
-            Printf(false, "%FtNOT LOCKED IN WORKPLANE%E"); 
+            Printf(false, "%FtNOT LOCKED IN WORKPLANE%E");
         } else {
             Entity *w = SK.GetEntity(e->workplane);
             Printf(false, "%FtIN WORKPLANE%E  %s", w->DescriptionString());
@@ -250,6 +323,11 @@ void TextWindow::DescribeSelection(void) {
         if(e->construction) {
             Printf(false, "%FtCONSTRUCTION");
         }
+		if (SS.revisionUnlockKey && REV1RT){	// Is this a user drawn element
+			if (e->h.isFromRequest() == false) {
+				Printf(false, "%FtGENERATED");
+			}
+		}
     } else if(gs.n == 2 && gs.points == 2) {
         Printf(false, "%FtTWO POINTS");
         Vector p0 = SK.GetEntity(gs.point[0])->PointGetNum();
@@ -298,24 +376,29 @@ void TextWindow::DescribeSelection(void) {
 		Vector v1 = SK.GetEntity(gs.entity[1])->VectorGetNum();
 		v0 = v0.WithMagnitude(1);
 		v1 = v1.WithMagnitude(1);
-		
-		if (!(SS.revisionUnlockKey && 0x1)){//RT Pevious stuff
+
+		if (!(SS.solveOptions & EDIT_ENABLENAMING)){//RT Pevious stuff
 			Printf(true, "  vectorA = " PT_AS_NUM, CO(v0));
 			Printf(false, "  vectorB = " PT_AS_NUM, CO(v1));
 		}
 		else 							//Name the vectors
 		{	//RT named lines Substituting above with names
-			Request *rLn1 = SK.GetRequest0(gs.entity[0].request());	//Get object containing the strings
-			Request *rLn2 = SK.GetRequest0(gs.entity[1].request());	//Return object containing the strings
-			if (rLn1){		// Only if the request exists
-				Printf(false, "Vector %s  = " PT_AS_NUM, rLn1->str.str, CO(v0));
-				Printf(false, "Vector %s  = " PT_AS_NUM, rLn2->str.str, CO(v1));
+			Request* rLn1 = SK.GetRequest0(gs.entity[0].request());	//Get object containing the strings
+			if (rLn1){							// Only if the request exists
+				Printf(false, "Line %s  = " PT_AS_NUM, rLn1->str.str, CO(v0));
 			}
+			else
+				Printf(false, "Generated  = " PT_AS_NUM, CO(v0));
+			Request* rLn2 = SK.GetRequest0(gs.entity[1].request());	//Return object containing the strings
+			if (rLn2)							// Only if the request exists
+				Printf(false, "Line %s  = " PT_AS_NUM, rLn2->str.str, CO(v1));
+			else
+				Printf(false, "Generated  = " PT_AS_NUM , CO(v1));
 		}									//RT*****************END showing named lines
         double theta = acos(v0.Dot(v1));
         Printf(true,  "    angle = %Fi%2%E degrees", theta*180/PI);
         while(theta < PI/2) theta += PI;
-        while(theta > PI/2) theta -= PI; 
+        while(theta > PI/2) theta -= PI;
         Printf(false, " or angle = %Fi%2%E (mod 180)", theta*180/PI);
     } else if(gs.n == 2 && gs.faces == 2) {
         Printf(false, "%FtTWO PLANE FACES");
@@ -333,7 +416,7 @@ void TextWindow::DescribeSelection(void) {
         double theta = acos(n0.Dot(n1));
         Printf(true,  "         angle = %Fi%2%E degrees", theta*180/PI);
         while(theta < PI/2) theta += PI;
-        while(theta > PI/2) theta -= PI; 
+        while(theta > PI/2) theta -= PI;
         Printf(false, "      or angle = %Fi%2%E (mod 180)", theta*180/PI);
 
         if(fabs(theta) < 0.01) {
@@ -345,18 +428,20 @@ void TextWindow::DescribeSelection(void) {
     } else if(gs.n == 0 && gs.constraints == 1) {
         Printf(false, "%FtSELECTED:%E %s",
             SK.GetConstraint(gs.constraint[0])->DescriptionString());
-		if (SS.revisionUnlockKey && 0x1){
+		if (SS.solveOptions & EDIT_ENABLENAMING){
 			Constraint *c = SK.GetConstraint(gs.constraint[0]);
 			char *s = c->DescriptionString();
+            Printf(true, "'%Fi%s%E' %Fl%Lc%f%D[Edit]%E",                    //Link='c'
+				c->comment.str, &TextWindow::ScreenEditTextRT, c->h);
 			TextWindow::txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
-			Printf(false, "%FtSELECTED:%E %s", s);
+			Printf(false, "%Ft%E %s", s);
 		}
     } else {
         int n = SS.GW.selection.n;
         Printf(false, "%FtSELECTED:%E %d item%s", n, n == 1 ? "" : "s");
     }
 
-    if(shown.screen == SCREEN_STYLE_INFO && 
+    if(shown.screen == SCREEN_STYLE_INFO &&
        shown.style.v >= Style::FIRST_CUSTOM && gs.stylables > 0)
     {
         // If we are showing a screen for a particular style, then offer the
@@ -387,13 +472,13 @@ void TextWindow::DescribeSelection(void) {
             0,
             &ScreenAssignSelectionToStyle);
     }
-	if (SS.revisionUnlockKey && 0x1){
+	if (SS.revisionUnlockKey && REV1RT){
 		if (e){
 			Group *g = SK.GetGroup(e->group);
 			Printf(true,
-				"%Fl%Ll%D%f%s",		
+				"%Fl%Ll%D%f%s",
 				//%D=data to pass to function
-				//%f =function 
+				//%f =function
 				//%s=function description
 				g->h.v, (&TextWindow::ScreenActivateGroup), "Activate group");
 		}
@@ -402,6 +487,7 @@ void TextWindow::DescribeSelection(void) {
 			// more than one entity was selected
 		}
 	}
+
     Printf(true, "%Fl%f%Ll(unselect all)%E", &TextWindow::ScreenUnselectAll);
 }
 

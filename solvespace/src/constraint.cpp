@@ -100,6 +100,7 @@ void Constraint::Constrain(int type, hEntity ptA, hEntity ptB,
     c.entityB = entityB;
     c.other = other;
     c.other2 = other2;
+ //   c.comment.strcpy(comment.str);      //RT Copy the name of the constraint, but we do not have comment.str passed
     AddConstraint(&c, false);
 }
 void Constraint::Constrain(int type, hEntity ptA, hEntity ptB, hEntity entityA){
@@ -184,7 +185,7 @@ void Constraint::MenuConstrain(int id) {
                 Vector a = SK.GetEntity(c.ptA)->PointGetNum();
                 Vector b = SK.GetEntity(c.ptB)->PointGetNum();
                 c.disp.offset = n.Cross(a.Minus(b));
-                c.disp.offset = (c.disp.offset).WithMagnitude(50/SS.GW.scale);
+                c.disp.offset = (c.disp.offset).WithMagnitude(50/SS.GW.scaleWin);
             } else {
                 c.disp.offset = Vector::From(0, 0, 0);
             }
@@ -363,7 +364,7 @@ void Constraint::MenuConstrain(int id) {
                 c.entityA = gs.entity[0];
                 c.ptA = gs.point[0];
                 c.ptB = gs.point[1];
-            } else if(gs.lineSegments == 1 && 
+            } else if(gs.lineSegments == 1 &&
                                 ((gs.workplanes == 1 && gs.n == 2) ||
                                  (gs.n == 1)))
             {
@@ -504,7 +505,7 @@ void Constraint::MenuConstrain(int id) {
                     // normal vector; allow that, since the numerical
                     // constraint does
                     SWAP(Vector, ru, rv);
-                } 
+                }
                 fu = fu.Dot(ru) > 0 ? ru : ru.ScaledBy(-1);
                 fv = fv.Dot(rv) > 0 ? rv : rv.ScaledBy(-1);
 
@@ -562,7 +563,7 @@ void Constraint::MenuConstrain(int id) {
                 return;
             }
 
-            Entity *ea = SK.GetEntity(c.entityA), 
+            Entity *ea = SK.GetEntity(c.entityA),
                    *eb = SK.GetEntity(c.entityB);
             if(ea->type == Entity::LINE_SEGMENT &&
                eb->type == Entity::LINE_SEGMENT)
