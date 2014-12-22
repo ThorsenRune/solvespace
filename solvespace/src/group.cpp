@@ -51,7 +51,22 @@ bool Group::IsVisible(void) {
 		return false;
     return true;
 }
-
+void Group::AddNewGroup(Group*g){
+		int i;
+		g->h.v = 100 +SK.group.elem[SK.group.n-1].h.v;				//Leave some space between groups
+		for (i = 1; i < SK.group.n - 1; i++) {
+ 			if (SK.group.elem[i].h.v < SS.GW.activeGroup.v) continue;		//Roll forward to active group
+            int d=(SK.group.elem[i + 1].h.v)-(SK.group.elem[i].h.v );      //Distance between consecutive group id's
+			if ( 1< d){	//There is an empty space
+			    int newid=(SK.group.elem[i].h.v )+(d/2);
+                    SS.GW.statusMessage(" Inserted group %d between %d and %d",
+                            newid,SK.group.elem[i].h.v, SK.group.elem[i+1].h.v);
+				g->h.v = newid;
+				break;
+			}
+		}
+		SK.group.Add(g);
+}
 void Group::MenuGroup(int id) {		//RTc:Create a new group: workplane/extrude../import
     Group g;
     ZERO(&g);
@@ -67,16 +82,16 @@ void Group::MenuGroup(int id) {		//RTc:Create a new group: workplane/extrude../i
 
     SS.GW.GroupSelection();
 
-    switch(id) {
-        case GraphicsWindow::MNU_GROUP_3D:
-            g.type = DRAWING_3D;
-            g.name.strcpy("sketch-in-3d");
-            break;
+	switch (id) {
+	case GraphicsWindow::MNU_GROUP_3D:
+		g.type = DRAWING_3D;
+		g.name.strcpy("sketch-in-3d");
+		break;
 
-        case GraphicsWindow::MNU_GROUP_WRKPL:
-            g.type = DRAWING_WORKPLANE;
-            g.name.strcpy("sketch-in-plane");
-            if(gs.points == 1 && gs.n == 1) {		//RTc:Create new workplanes
+	case GraphicsWindow::MNU_GROUP_WRKPL:
+		g.type = DRAWING_WORKPLANE;
+		g.name.strcpy("sketch-in-plane");
+		if(gs.points == 1 && gs.n == 1) {		//RTc:Create new workplanes
                 g.subtype = WORKPLANE_BY_POINT_ORTHO;
 
                 Vector u = SS.GW.projRight, v = SS.GW.projUp;
@@ -227,9 +242,12 @@ void Group::MenuGroup(int id) {		//RTc:Create a new group: workplane/extrude../i
     }
     SS.GW.ClearSelection();
     SS.UndoRemember();
-
-    SK.group.AddAndAssignId(&g);
-    Group *gg = SK.GetGroup(g.h);
+	if (SS.revisionEnabler & REV1RT){		//Insert group in nearest vacant slot after active
+        AddNewGroup(&g);
+	}
+	else
+		SK.group.AddAndAssignId(&g);		//Original code
+    Group *gg = SK.GetGroup(g.h);			//RTc: Get a pointer to g
 
     if(gg->type == IMPORTED) {
         SS.ReloadAllImported();

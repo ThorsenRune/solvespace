@@ -312,10 +312,15 @@ static void SSGL_CALLBACK Vertex(Vector *p)
 void ssglFillPolygon(SPolygon *p)
 {
     GLUtesselator *gt = gluNewTess();
+    #ifdef MINGW
+    gluTessCallback(gt, GLU_TESS_BEGIN,  (_GLUfuncptr)glBegin);     //Mingw fix
+    gluTessCallback(gt, GLU_TESS_END,    (_GLUfuncptr)glEnd);
+    gluTessCallback(gt, GLU_TESS_VERTEX, (_GLUfuncptr)Vertex);
+    #else
     gluTessCallback(gt, GLU_TESS_BEGIN,  (ssglCallbackFptr *)glBegin);
     gluTessCallback(gt, GLU_TESS_END,    (ssglCallbackFptr *)glEnd);
     gluTessCallback(gt, GLU_TESS_VERTEX, (ssglCallbackFptr *)Vertex);
-
+    #endif // MINGW
     ssglTesselatePolygon(gt, p);
 
     gluDeleteTess(gt);
@@ -334,8 +339,11 @@ static void SSGL_CALLBACK Combine(double coords[3], void *vertexData[4],
 void ssglTesselatePolygon(GLUtesselator *gt, SPolygon *p)
 {
     int i, j;
-
-    gluTessCallback(gt, GLU_TESS_COMBINE, (ssglCallbackFptr *)Combine);
+#ifdef MINGW
+        gluTessCallback(gt, GLU_TESS_COMBINE, (_GLUfuncptr)Combine);    //Mingw fix
+#else
+        gluTessCallback(gt, GLU_TESS_COMBINE, (ssglCallbackFptr *)Combine);
+#endif // MINGW
     gluTessProperty(gt, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
 
     Vector normal = p->normal;

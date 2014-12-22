@@ -49,7 +49,7 @@ public:
     uint32_t v;
 
     inline bool isFromRequest(void);
-    inline hRequest request(void);
+    inline hRequest request(void);			//RTc get the  handle for the request
     inline hGroup group(void);
     inline hEquation equation(int i);
 };
@@ -59,7 +59,7 @@ public:
     //      31:16   -- request index
     uint32_t v;
 
-    inline hRequest request(void);
+    inline hRequest request(void);				//RTc get the  handle for the request
 };
 
 class hStyle {
@@ -103,7 +103,7 @@ public:
     };	//Used by group type
     int type;
 
-    int order;
+    int order;						//RTc:This order variable is never used?
 
     hGroup      opA;
     hGroup      opB;
@@ -251,6 +251,7 @@ public:
     SPolygon GetPolygon(void);
 
     static void MenuGroup(int id);
+    static void AddNewGroup(Group*g);
 };
 
 // A user request for some primitive or derived operation; for example a
@@ -290,7 +291,7 @@ public:
 
     static hParam AddParam(ParamList *param, hParam hp);
     void Generate(EntityList *entity, ParamList *param);
-	static Request* Request::getRequestByName(char* reqNameStr);			//RT new function to get the request by its given string (name)
+ 	static Request* getRequestByName(char* reqNameStr);			//RT new function to get the request by its given string (name)
     char *DescriptionString(void);
 
     void Clear(void) {}

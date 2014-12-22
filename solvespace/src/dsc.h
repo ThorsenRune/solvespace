@@ -276,12 +276,12 @@ public:
                 first = mid + 1;
             } else {
                 dbp("can't insert in list; is handle %d not unique?", t->h.v);
-                oops();
+                //oops();
             }
         }
         int i = first;
 
-        memmove(elem+i+1, elem+i, (size_t)(n-i)*sizeof(elem[0]));
+        memmove(elem+i+1, elem+i, (size_t)(n-i)*sizeof(elem[0]));			//RTc insert the element and move the rest down the list
         elem[i] = *t;
         n++;							//the number of requests/elements...
     }
@@ -289,8 +289,8 @@ public:
     T *FindById(H h) {
         T *t = FindByIdNoOops(h);
         if(!t) {
-			Error("failed to look up item %08x, searched %d items", h.v, n);	//RT debug message on screen before closing app
-   //         dbp("failed to look up item %08x, searched %d items", h.v, n);
+//			Error("failed to look up item %08x, searched %d items", h.v, n);	//RT debug message on screen before closing app
+            dbp("failed to look up item %08x, searched %d items", h.v, n);
    //         oops();
         }
         return t;
@@ -328,7 +328,7 @@ public:
         return NULL;
     }
 	T* getByName(H h){              //RT The idea here is to get an element by its string
-		Error("Call getByName Not implemented yet");
+//		Error("Call getByName Not implemented yet");
 
 
 	}

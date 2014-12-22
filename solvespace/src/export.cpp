@@ -7,7 +7,7 @@
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
-#include <png.h>
+#include <Png.h>
 
 void SolveSpace::ExportSectionTo(char *filename) {
     Vector gn = (SS.GW.projRight).Cross(SS.GW.projUp);
@@ -129,7 +129,8 @@ void SolveSpace::ExportViewOrWireframeTo(char *filename, bool wireframe) {
     for(i = 0; i < SK.entity.n; i++) {
         Entity *e = &(SK.entity.elem[i]);
         if(!e->IsVisible()) continue;
-        if(e->construction) continue;
+		if (0==(SS.solveOptions&EXPORT_CONSTRUCTIONLINES))
+	        if(e->construction) continue;
 
         if(SS.exportPwlCurves || (sm && !SS.GW.showHdnLines) ||
                                  fabs(SS.exportOffset) > LENGTH_EPS)

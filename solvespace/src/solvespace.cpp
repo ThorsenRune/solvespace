@@ -97,7 +97,7 @@ void SolveSpace::Init(char *cmdLine) {
     showToolbar = CnfThawBool(true, "ShowToolbar");
 	copyConstraints = CnfThawBool(false, "CopyConstraints");
 	solveOptions =		CnfThawInt(SOLVER_FINDBAD, "solveOptions");
-	revisionUnlockKey = CnfThawInt(REV1RT, "revisionUnlockKey");
+	revisionEnabler = CnfThawInt(REV1RT, "revisionUnlockKey");
 	 					//RT Set first revion flag, todo: make a menu and let user select the level
 	renderDetailWhenSaving = CnfThawFloat(2.0f , "renderDetailWhenSaving");    // Recent files menus
     for(i = 0; i < MAX_RECENT; i++) {
@@ -199,7 +199,7 @@ void SolveSpace::Exit(void) {
     CnfFreezeBool(showToolbar, "ShowToolbar");
 	CnfFreezeBool(copyConstraints, "CopyConstraints");
 	CnfFreezeInt(solveOptions, "solveOptions");
-	CnfFreezeInt(revisionUnlockKey, "revisionUnlockKey");			//
+	CnfFreezeInt(revisionEnabler, "revisionUnlockKey");							//
 	CnfFreezeFloat((float) renderDetailWhenSaving, "renderDetailWhenSaving");
     // And the default styles, colors and line widths and such.
     Style::FreezeDefaultStyles();

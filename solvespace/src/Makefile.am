@@ -1,4 +1,4 @@
-## src/Makefile.am
+## src/\q
 
 AUTOMAKE_OPTIONS = subdir-objects
 

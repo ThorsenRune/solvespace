@@ -252,7 +252,7 @@ public:
     static void ScreenShowGroupsSpecial(int link, uint32_t v);
     static void ScreenDeleteGroup(int link, uint32_t v);
 
-	int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString);    //RT2014 Supplementary description of constraints
+	int  txtConstraintNamesGet(Constraint *c, char **psNewString);    //RT2014 Supplementary description of constraints
 
     static void ScreenHoverConstraint(int link, uint32_t v);
     static void ScreenHoverRequest(int link, uint32_t v);
@@ -685,6 +685,7 @@ public:
     bool    showMesh;
     bool    showHdnLines;
     void ToggleBool(bool *v);
+    void statusMessage(const char * sprintf_params,...);  //RT: Show a status message on the graphics window
 
     bool    showSnapGrid;
 

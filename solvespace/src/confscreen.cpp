@@ -5,11 +5,11 @@
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
-
+#include <windef.h>         //Defines W ORD
 //RT new stuff
 void TextWindow::ChangeRenderDetailWhenSaving(int link, uint32_t v) {
 	char str[1024];
-	if (v == RESETDEV){
+	if (v == 1221){
 		SS.renderDetailWhenSaving = 0;		//Disable to option
 	}
 	else
@@ -320,17 +320,27 @@ void TextWindow::ShowConfiguration(void) {
 
 //RT1217 Options screen
 void TextWindow::ShowOptions(void) {
+// Revision enabler
+	Printf(true, "  %Fd%f%D%LR%c Enable copy constraints (eMVe revision) %E",
+		&ScreenShowOptions, REVeMVe,
+		(SS.revisionEnabler & REVeMVe) ? CHECK_TRUE : CHECK_FALSE);
+	SS.copyConstraints = (SS.revisionEnabler  & 	REVeMVe);
 
-	if (SS.revisionUnlockKey && REV1RT){
-		Printf(false, "%Ft Rendering level when saving %E");
+	Printf(true, "  %Fd%f%D%LR%c Enable GUI revision RT2014 %E",
+		&ScreenShowOptions, REV1RT,
+		(SS.revisionEnabler & REV1RT) ? CHECK_TRUE : CHECK_FALSE);
+	Printf(false, "");
+
+	// Other options
+	if(SS.revisionEnabler & REV1RT){
+		Printf(true, "%FtWhen saving, zoom and render to level %E");
 		Printf(false, "%Ba   %@ %Fl%Ll%f%D[Disable]%E 	%Fl%Ll%f%D[Set] %E		",
 								SS.renderDetailWhenSaving,
-								&ChangeRenderDetailWhenSaving, RESETDEV,
+								&ChangeRenderDetailWhenSaving, 1221,
 								&ChangeRenderDetailWhenSaving, EDIT_RENDERDETAIL);
 	}
 
-	Printf(false, "");
-	Printf(false, "EDIT");
+	Printf(false, "%FtEDIT");
 	Printf(false, "  %Fd%f%D%Ll%c Bad constraint search (CPU Killer) %E",
 		&ScreenShowOptions, SOLVER_FINDBAD,
 		(SS.solveOptions  & 	SOLVER_FINDBAD) ? CHECK_TRUE : CHECK_FALSE);
@@ -342,10 +352,7 @@ void TextWindow::ShowOptions(void) {
 		&ScreenShowOptions, EDIT_DEFAULT2CONSTRUCTION,
 		(SS.solveOptions  & 	EDIT_DEFAULT2CONSTRUCTION) ? CHECK_TRUE : CHECK_FALSE);
 
-	Printf(false, "  %Fd%f%D%Ll%c Copy Constraints %E",
-		&ScreenShowOptions, EDIT_COPYCONSTRAINTS,
-		(SS.solveOptions  & 	EDIT_COPYCONSTRAINTS) ? CHECK_TRUE : CHECK_FALSE);
-		SS.copyConstraints = (SS.solveOptions  & 	EDIT_COPYCONSTRAINTS);
+
 	Printf(false, "  %Fd%f%D%Ll%c Enable element naming  %E",
 		&ScreenShowOptions, EDIT_ENABLENAMING,
 		(SS.solveOptions  & 	EDIT_ENABLENAMING) ? CHECK_TRUE : CHECK_FALSE);
@@ -353,7 +360,10 @@ void TextWindow::ShowOptions(void) {
 	Printf(false, "  %Fd%f%D%Ll%c Show all Constraints %E",
 		&ScreenShowOptions, SHOW_COMMENTS_FOR_ALL_GROUPS,
 		(SS.solveOptions  & 	SHOW_COMMENTS_FOR_ALL_GROUPS) ? CHECK_TRUE : CHECK_FALSE);
-		SS.copyConstraints = (SS.solveOptions  & 	SHOW_COMMENTS_FOR_ALL_GROUPS);
+
+	Printf(false, "  %Fd%f%D%Ll%c Export construction lines %E",
+		&ScreenShowOptions, EXPORT_CONSTRUCTIONLINES,
+		(SS.solveOptions  & 	EXPORT_CONSTRUCTIONLINES) ? CHECK_TRUE : CHECK_FALSE);
 
 }
 bool TextWindow::EditControlDoneForConfiguration(const char *s) {

@@ -5,6 +5,7 @@
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
+#include <cstddef>                      //RT1220 defines nullptr http://en.wikibooks.org/wiki/More_C++_Idioms/nullptr
 
 #define mView (&GraphicsWindow::MenuView)
 #define mEdit (&GraphicsWindow::MenuEdit)
@@ -61,12 +62,8 @@ const GraphicsWindow::MenuEntry GraphicsWindow::menu[] = {
 	{ 1, "Select &All", MNU_SELECT_ALL, C | 'A', mEdit },
 	{ 1, "&Unselect All", MNU_UNSELECT_ALL, ESC, mEdit },
 	{ 1, NULL, 0, 0, NULL },
-	{ 1, "Rename", MNU_EDIT_RENAME, F(2), mEdit },
-	{ 1, "Cop&y Constraints", MNU_COPY_CONSTRAINTS, 0, mEdit },
-	{ 1, "RT2014 version", MNU_VERSION_RT, 0, mEdit },
-//	{ 1, "Bad constraint search (CPU Killer)", MNU_JACOBIAN_FIND_BAD, 0, mEdit }, OBSOLETE
 
-
+	{ 1, "Rename", MNU_EDIT_RENAME, F(2), mEdit },					//RT Don't know how to make this conditional
 
 	{ 0, "&View", 0, 0, NULL },
 	{ 1, "Zoom &In", MNU_ZOOM_IN, '+', mView },
@@ -311,6 +308,12 @@ void GraphicsWindow::AnimateOnto(Quaternion quatf, Vector offsetf) {
     SS.later.showTW = true;
 }
 
+#ifndef min
+#   define min(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef max
+#   define max(x, y) ((x) > (y) ? (x) : (y))
+#endif
 void GraphicsWindow::HandlePointForZoomToFit(Vector p,
                         Point2d *pmax, Point2d *pmin, double *wmin, bool div)
 {
@@ -419,14 +422,14 @@ void GraphicsWindow::ZoomToFit(bool includingInvisibles) {
 
 Group *GroupAfter(hGroup hFromGroup){			// Return the group after a given grouphandle
 	Group *g;
-	Group *GroupAfter1 = nullptr;
+	Group *GroupAfter1 = NULL;
 	for (g = SK.group.First(); g; g = SK.group.NextAfter(g)) {//RT: Run through all groups and select the group before 'FromGroup'
 		if (hFromGroup.v == g->h.v)			//Found
 		{
 			return  SK.group.NextAfter(g);	//				Return the group object
 		}
 	}
-	return nullptr;		// Not found so return nullpointer
+	return NULL;		// Not found so return nullpointer
 }
 
 Group *GroupBefore(hGroup hFromGroup){				// Return the group before a given group handle
@@ -444,7 +447,7 @@ Group *GroupBefore(hGroup hFromGroup){				// Return the group before a given gro
 void ActivateGroup(Group *SetGroup = nullptr){          //RT1216 used by keyup/dwn (should be cleaned up)
 	if (SetGroup != nullptr){
 		SS.GW.activeGroup = SetGroup->h;
-		SetGroup->visible = TRUE;								//RT:Make  visible
+		SetGroup->visible = true;								//RT:Make  visible
 		SK.GetGroup(SS.GW.activeGroup)->Activate();				//Activate the group
 		SS.GW.EnsureValidActives();
         SS.TW.shown.group=SS.GW.activeGroup;                //Set the TW (browsers) shown group to the active group
@@ -463,33 +466,73 @@ void ActivateNextGroup(void){
 }
 // New code prototype area
 
-
-void RTMoveReq(int nSrcGrp, int nDstGrp){
+char* TypeDescr(int type){
+	switch (type) {
+	case Request::WORKPLANE:return "WORKPLANE";
+	case Request::DATUM_POINT:return "DATUM_POINT";
+	case Request::LINE_SEGMENT:return "LINE_SEGMENT";
+	case Request::CUBIC:return "CUBIC";
+	case Request::CUBIC_PERIODIC:return "CUBIC_PERIODIC";
+	case Request::CIRCLE:return "CIRCLE";
+	case Request::ARC_OF_CIRCLE:return "ARC_OF_CIRCLE";
+	case Request::TTF_TEXT:return "TTF_TEXT";
+	}
+}
+void RTMoveReq(int nSrcGrp, int nDstGrp){           // Rubbish, take this away
+	char* testtxt;
 	hGroup hSrcGrp = SK.group.elem[nSrcGrp].h;
 	hGroup hDstGrp = SK.group.elem[nDstGrp].h;
+	Group dg = SK.group.elem[nDstGrp];
+	Group sg = SK.group.elem[nSrcGrp];
+	Entity *wr = NULL;
+	Entity *ws = NULL;
 	for (int i = 0; i < SK.request.n; i++){		// Loop Through requests
 		Request *r = &(SK.request.elem[i]);		//Pointer to the element
-		if (r->type == Request::WORKPLANE){		// Dont move a workplane
-			sprintf(r->str.str, "Plane%d", r->h.v);
-			continue;
+		char * TypeNavn = TypeDescr(r->type);
+		if (r->workplane.v != Entity::FREE_IN_3D.v){
+			wr = SK.GetEntity(r->workplane);			//Workplanes comes from requests or groups
+			if (wr->h.isFromRequest()){
+				Request *ror = SK.GetRequest(wr->h.request());
+				testtxt = ror->DescriptionString();
+				if (ror->group.v==hSrcGrp.v)		//The workplane is located in the group we will move
+					int rt=12;
+			}
+			else {
+				Group *gor = SK.GetGroup(wr->h.group());
+				testtxt = gor->DescriptionString();
+				if (gor->h.v == hSrcGrp.v)		//The workplane is located in the group we will move
+					int rt=12;
+			}
+
+			ws = SK.GetEntity(sg.activeWorkplane);
 		}
-		else if (r->group.v == nSrcGrp){
-			r->group.v = hDstGrp.v;		//Change the owner of
-			r->workplane.v = SK.group.elem[nDstGrp].activeWorkplane.v;
+		if (r->group.v == hSrcGrp.v){
+			if (r->type == Request::WORKPLANE)
+				sprintf(r->str.str, "Plane%d", r->h.v);
+			r->group.v = hDstGrp.v;		//Change the owner group of the request
+			if (r->workplane.group().v == hSrcGrp.v){
+				r->workplane.v = dg.activeWorkplane.v;
+			}
+			if (r->workplane.v == Entity::FREE_IN_3D.v)
+				r->workplane.v = Entity::FREE_IN_3D.v;
+			else  if (SS.EntityExists(r->workplane))	//Has a workplane
+				break;
+			else
+
+				r->workplane.v = dg.activeWorkplane.v;
+
 		}
 	}
 }
 void RTTest(int Param){	//RT2014 Prototyping new code
-	// Change imported file
-	//TextWindow:editImportFileNameRT(0, 0);
 
-
+	// Insert a new group by bubbling up the later groups is not feasible
+	//2' Try to add the new group where there is a vacant slot
 
 	// Following is on stand by. it sort of works
-	int  nSrcGrp = 3, nDstGrp = 2, nSwapGrp = 4;	//Just for prototyping, should be selecable in some way
-	RTMoveReq(nDstGrp, nSwapGrp);		//Dest to temp
-	RTMoveReq(nSrcGrp, nDstGrp);
-	RTMoveReq(nSwapGrp, nSrcGrp);
+	int  nDstGrp = SK.group.n - 1;			//Last group
+	int  nSrcGrp = nDstGrp - 1;
+	RTMoveReq(nSrcGrp, nDstGrp);			//Dest to temp v1->v2
 	SS.GenerateAll(0, INT_MAX);
 	return;
 
@@ -778,9 +821,6 @@ void GraphicsWindow::EnsureValidActives(void) {
     CheckMenuById(MNU_SHOW_TOOLBAR, SS.showToolbar);
     CheckMenuById(MNU_PERSPECTIVE_PROJ, SS.usePerspectiveProj);
     CheckMenuById(MNU_SHOW_GRID, SS.GW.showSnapGrid);
-	CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
-	CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey & REV1RT);	//RT
-//obsolete	CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions & SOLVER_FINDBAD); //RT
 
 #ifdef HAVE_FLTK_FULLSCREEN
     CheckMenuById(MNU_FULL_SCREEN, FullScreenIsActive());
@@ -1047,18 +1087,11 @@ void GraphicsWindow::MenuEdit(int id) {
 			SS.copyConstraints = !SS.copyConstraints;
 			CheckMenuById(MNU_COPY_CONSTRAINTS, SS.copyConstraints);
 			break;
-		case MNU_VERSION_RT:
-			SS.revisionUnlockKey = (SS.revisionUnlockKey ^ REV1RT);	//XOR flag constant
-			CheckMenuById(MNU_VERSION_RT, SS.revisionUnlockKey & REV1RT);	//RT
-			break;
-		case MNU_JACOBIAN_FIND_BAD:
-			SS.solveOptions = (SS.solveOptions ^ SOLVER_FINDBAD);
-			CheckMenuById(MNU_JACOBIAN_FIND_BAD, SS.solveOptions & SOLVER_FINDBAD); //RT
-			break;
-
 		case MNU_EDIT_RENAME:
-			doRenameEntity();
-			break;
+			if (SS.revisionEnabler & REV1RT){
+				doRenameEntity();
+				break;
+			}
 		default: ERRMSG_RT();
     }
 }
@@ -1179,5 +1212,39 @@ void GraphicsWindow::ToggleBool(bool *v) {
     SS.GenerateAll();
     InvalidateGraphics();
     SS.later.showTW = true;
+}
+
+void GraphicsWindow::statusMessage(const char * sprintf_params,...){
+    static char msg[1024];
+    va_list args;
+    va_start(args, sprintf_params);
+    _vsnprintf(msg, sizeof(msg), sprintf_params, args);
+    va_end(args);
+
+    int w, h;
+            GetGraphicsWindowSize(&w, &h);
+            glDrawBuffer(GL_FRONT);
+            glViewport(0, 0, w, h);
+            glLoadIdentity();
+            glTranslated(-1, 1, 0);
+            glScaled(2.0/w, 2.0/h, 1.0);
+            glDisable(GL_DEPTH_TEST);
+
+            double left = 80, top = -0, width = 340, height = 24;
+            glColor3d(0.9, 0.8, 0.8);
+            ssglAxisAlignedQuad(left, left+width, top, top-height);
+            glLineWidth(1);
+            glColor3d(0.0, 0.0, 0.0);
+            ssglAxisAlignedLineLoop(left, left+width, top, top-height);
+
+            ssglCreateBitmapFont();
+            glColor3d(0, 0, 0);
+            glPushMatrix();
+                glTranslated(left+8, top-20, 0);
+                glScaled(1, -1, 1);
+                ssglBitmapText(msg, Vector::From(0, 0, 0));
+            glPopMatrix();
+            glFlush();
+            glDrawBuffer(GL_BACK);
 }
 

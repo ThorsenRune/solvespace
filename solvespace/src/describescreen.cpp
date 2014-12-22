@@ -13,7 +13,7 @@ void TextWindow::ScreenUnselectAll(int link, uint32_t v) {
 void TextWindow::ScreenEditTtfText(int link, uint32_t v) {          //RTc user has activated the edit link
     hRequest hr = { v };
 	Request *r;
-	if (SS.revisionUnlockKey && REV1RT){					//RT No crash code
+	if(SS.revisionEnabler & REV1RT){					//RT No crash code
 
 
 		r = SK.GetRequest0(hr);						//Get the request
@@ -166,7 +166,7 @@ void TextWindow::DescribeSelection(void) {
             case Entity::POINT_N_ROT_AA:
                 p = e->PointGetNum();
 				Printf(false, "%FtPOINT%E at " PT_AS_STR, COSTR(p));
-				if (SS.revisionUnlockKey && REV1RT)
+				if(SS.revisionEnabler & REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 break;
 
@@ -188,7 +188,7 @@ void TextWindow::DescribeSelection(void) {
             case Entity::WORKPLANE: {
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(false, "%FtWORKPLANE%E");
-				if (SS.revisionUnlockKey && REV1RT)
+				if(SS.revisionEnabler & REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
 				Printf(true, "   origin = " PT_AS_STR, COSTR(p));
                 Quaternion q = e->Normal()->NormalGetNum();
@@ -201,7 +201,7 @@ void TextWindow::DescribeSelection(void) {
 			Vector p0 = SK.GetEntity(e->point[0])->PointGetNum();
 				p = p0;
 				Printf(false, "%FtLINE SEGMENT%E");
-				if (SS.revisionUnlockKey && REV1RT)
+				if(SS.revisionEnabler & REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 Printf(true,  "   thru " PT_AS_STR, COSTR(p));
                 Vector p1 = SK.GetEntity(e->point[1])->PointGetNum();
@@ -232,7 +232,7 @@ void TextWindow::DescribeSelection(void) {
 
             case Entity::ARC_OF_CIRCLE: {
                 Printf(false, "%FtARC OF A CIRCLE%E");
-				if (SS.revisionUnlockKey && REV1RT)
+				if(SS.revisionEnabler & REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
@@ -250,7 +250,7 @@ void TextWindow::DescribeSelection(void) {
             }
             case Entity::CIRCLE: {
                 Printf(false, "%FtCIRCLE%E");
-				if (SS.revisionUnlockKey && REV1RT)
+				if(SS.revisionEnabler & REV1RT)
 					txtEntityDescription_RT(e);	//RT Let user edit the segment name
                 p = SK.GetEntity(e->point[0])->PointGetNum();
                 Printf(true,  "     center = " PT_AS_STR, COSTR(p));
@@ -323,7 +323,7 @@ void TextWindow::DescribeSelection(void) {
         if(e->construction) {
             Printf(false, "%FtCONSTRUCTION");
         }
-		if (SS.revisionUnlockKey && REV1RT){	// Is this a user drawn element
+		if(SS.revisionEnabler & REV1RT){	// Is this a user drawn element
 			if (e->h.isFromRequest() == false) {
 				Printf(false, "%FtGENERATED");
 			}
@@ -472,7 +472,7 @@ void TextWindow::DescribeSelection(void) {
             0,
             &ScreenAssignSelectionToStyle);
     }
-	if (SS.revisionUnlockKey && REV1RT){
+	if(SS.revisionEnabler & REV1RT){
 		if (e){
 			Group *g = SK.GetGroup(e->group);
 			Printf(true,

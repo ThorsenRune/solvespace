@@ -262,7 +262,7 @@ void SolveSpace::SaveUsingTable(int type) {
 bool SolveSpace::SaveToFile(char *filename) {
     // Make sure all the entities are regenerated up to date, since they
     // will be exported.
-	if (SS.revisionUnlockKey && REV1RT){	//RT:renderDetailWhenSaving  fixed zoom will be applied before saving so the level of detail can be kept between files.
+	if(SS.revisionEnabler & REV1RT){	//RT:renderDetailWhenSaving  fixed zoom will be applied before saving so the level of detail can be kept between files.
 		double remember = SS.GW.scaleWin;
 		if (renderDetailWhenSaving < 1)  renderDetailWhenSaving = SS.GW.scaleWin;
 		SS.GW.scaleWin = renderDetailWhenSaving;

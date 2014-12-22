@@ -115,7 +115,7 @@ void Request::Generate(IdList<Entity,hEntity> *entity,
 	e.str.strcpy(str.str);							//RT copy the request name as the entity name
 	e.parentRequestID = h.v;						//RT Remember what requestID generated this entity
     e.font.strcpy(font.str);
-    e.h = h.entity(0);				//Get the handle ID 
+    e.h = h.entity(0);				//Get the handle ID
 
     // And generate entities for the points
     for(i = 0; i < points; i++) {

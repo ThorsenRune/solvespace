@@ -151,7 +151,7 @@ void SolveSpace::GenerateAll(void) {
     // since all groups after the active group are hidden.
     for(i = 0; i < SK.group.n; i++) {
         Group *g = &(SK.group.elem[i]);
-        g->order = i;
+        g->order = i;										//RTc:This order variable is never used?
         if((!g->clean) || (g->solved.how != System::SOLVED_OKAY)) {
             firstDirty = min(firstDirty, i);
         }
@@ -197,9 +197,12 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
            displayedStatusMessage)
         {
             displayedStatusMessage = true;
+
+           	if (SS.revisionEnabler & REV1RT){		//Insert group in nearest vacant slot after active
+                GW.statusMessage("generating group   %d/%d", i, SK.group.n);
+        }else{              //RT just moved this into a function call statusMessage
             char msg[1024];
             sprintf(msg, "generating group %d/%d", i, SK.group.n);
-
             int w, h;
             GetGraphicsWindowSize(&w, &h);
             glDrawBuffer(GL_FRONT);
@@ -226,7 +229,7 @@ void SolveSpace::GenerateAll(int first, int last, bool andFindFree) {
             glFlush();
             glDrawBuffer(GL_BACK);
         }
-
+        }
         // The group may depend on entities or other groups, to define its
         // workplane geometry or for its operands. Those must already exist
         // in a previous group, so check them before generating.

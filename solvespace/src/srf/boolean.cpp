@@ -709,7 +709,7 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
             // All the trim curve IDs get rewritten; we know the new handles
             // to the curves since we recorded them in the previous step.
             STrimBy *stb;
-			if (SS.revisionUnlockKey && REV1RT){	//RT: Decomposing the original statement catching errors
+			if (SS.revisionEnabler & REV1RT){	//RT: Decomposing the original statement catching errors
 				for (stb = sn.trim.First(); stb; stb = sn.trim.NextAfter(stb)) {//RT the primitive solution is just to skip missing surfaces
 					if (!(stb)) {
 						countErrorsRT++;

@@ -57,7 +57,7 @@ double Constraint::EllipticalInterpolation(double rx, double ry, double theta) {
     return v;
 }
 //RT1217
-char *Constraint::Label1(void) {					//RT1217 rewriting constraints with name. Refs are denoted by ()
+char* Constraint::Label1(void) {					//RT1217 rewriting constraints with name. Refs are denoted by ()
 	static char Ret[1024];
 	static char Ret2[1024];
 	char* sr1 = " ";
@@ -94,7 +94,7 @@ char *Constraint::Label1(void) {					//RT1217 rewriting constraints with name. R
 //RT End
 char *Constraint::Label(void) {
     static char Ret[1024];
-	if (SS.revisionUnlockKey && REV1RT) return Label1();
+	if (SS.solveOptions  & 	SHOW_COMMENTS_FOR_ALL_GROUPS) return Label1();
 	if (type == ANGLE) {
 		sprintf(Ret, "%.2f", valA);
 	}
@@ -431,7 +431,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
         if(!(g->visible)) return;
     // And likewise if the group is not the active group; except for comments
     // with an assigned style.
-       if (SS.solveOptions & SHOW_COMMENTS_FOR_ALL_GROUPS)
+    if (!(SS.solveOptions & SHOW_COMMENTS_FOR_ALL_GROUPS))			//RT show constraints of all groups
     if(g->h.v != SS.GW.activeGroup.v && !(type == COMMENT && disp.style.v)) {
         return;
     }

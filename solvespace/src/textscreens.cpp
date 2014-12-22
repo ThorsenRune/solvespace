@@ -87,9 +87,11 @@ void TextWindow::ScreenHowGroupSolved(int link, uint32_t v) {
     SS.TW.GoToScreen(SCREEN_GROUP_SOLVE_INFO);
     SS.TW.shown.group.v = v;
 }
-void TextWindow::ScreenShowOptions(int link, uint32_t v) {
-	if (0<v)
-		SS.solveOptions = (SS.solveOptions ^ v);			//Toggle the optionbit
+void TextWindow::ScreenShowOptions(int link, uint32_t v) {			//Toggle bits of revision and solve
+	if (0 < v){
+		if (link = 'l')	SS.solveOptions = (SS.solveOptions ^ v);			//Toggle the optionbit
+		if (link = 'R')	SS.revisionEnabler = (SS.revisionEnabler ^ v);			//Toggle the optionbit
+	}
     SS.TW.GoToScreen(SCREEN_SHOWOPTIONS);
 }
 void TextWindow::ScreenShowConfiguration(int link, uint32_t v) {
@@ -140,11 +142,11 @@ void TextWindow::ShowListOfGroups(void) {
             // Link to a screen that gives more details on the group
             g->h.v, (&TextWindow::ScreenSelectGroup), s);
 
-        if(active) afterActive = true;
-		if (SS.revisionUnlockKey && REV1RT) afterActive = false;	//RT I like to see all group states
+        if(active) afterActive = true;								//RTc: Stop showing groups at active group
+		if (SS.revisionEnabler & REV1RT)  afterActive = false;	//RT I like to see all group states
     }
 	//RT START
-	if (SS.revisionUnlockKey && REV1RT){
+	if (SS.revisionEnabler & REV1RT){
 		if (SS.GW.activeGroup.v){
 			Group *g = SK.group.FindByIdNoOops(SS.GW.activeGroup);
 			if (g)
@@ -300,7 +302,7 @@ void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
 
 	hGroup hg = SS.TW.shown.group;
 
-	if (SS.revisionUnlockKey && REV1RT) {
+	if(SS.revisionEnabler & REV1RT) {
 		/*	RT2014: disable the annoying condition for deleting active group.
 		It makes more sense to actually require the group to be active before deleting
 		therefore the logic of the following statement could be inverted			*/
@@ -330,9 +332,9 @@ int TextWindow::txtConstraintNamesGet(Constraint *c, char **psNewString){   //RT
 	//Overwrite the description with named descriptions. The psNewString is the return value to call as  &oldString
  	static char tekst[1024];		//RT temporary string storage
 
-    Request *req4EA = SK.request.FindByIdNoOops(c->entityA.request());          //RT1218 centralizing getting the Request for Entity A
+    Request *req4EA = SK.request.FindByIdNoOops(c->entityA.request());          //RT1218 Request for lines.
     Request *req4EB = SK.request.FindByIdNoOops(c->entityB.request());          //RT1218 centralizing getting the Request for Entity A
-    Request *req4PtA = SK.request.FindByIdNoOops(c->ptA.request());          //RT1218 centralizing getting the Request for Entity A
+    Request *req4PtA = SK.request.FindByIdNoOops(c->ptA.request());          //RT1218 Request for points
     Request *req4PtB = SK.request.FindByIdNoOops(c->ptB.request());          //RT1218 centralizing getting the Request for Entity A
 
     if (c->type == Constraint::EQUAL_LENGTH_LINES){
@@ -514,7 +516,7 @@ void TextWindow::ShowGroupInfo(void) {
         &TextWindow::ScreenChangeGroupOption,
         g->visible ? CHECK_TRUE : CHECK_FALSE);
 
-if (SS.revisionUnlockKey & REV1RT){
+if (SS.revisionEnabler & REV1RT){
         Printf(false, " %f%Lh%Fd%c  hide constraints in this group",
         &TextWindow::ScreenChangeGroupOption,
         g->hideConstraints ? CHECK_TRUE : CHECK_FALSE);
@@ -576,7 +578,7 @@ list_items:
 		Constraint *c = &(SK.constraint.elem[i]);
 		if (c->group.v == shown.group.v) {
 			char *s = c->DescriptionString();
-			if (SS.revisionUnlockKey && REV1RT)	txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
+			if(SS.revisionEnabler & REV1RT)	txtConstraintNamesGet(c, &s); //RT Provide more info about constraints
 			Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E %s",
 				(a & 1) ? 'd' : 'a',
 				c->h.v, (&TextWindow::ScreenSelectConstraint),
@@ -625,7 +627,7 @@ void TextWindow::ShowGroupSolveInfo(void) {
 		Constraint *c = SK.constraint.FindByIdNoOops(hc);
 		if (!c) continue;
 		char *s = c->DescriptionString();
-		if (SS.revisionUnlockKey && REV1RT) TextWindow::txtConstraintNamesGet(c, &s); //RT Provide additional info about constraints
+		if(SS.revisionEnabler & REV1RT) TextWindow::txtConstraintNamesGet(c, &s); //RT Provide additional info about constraints
 		Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
 			(i & 1) ? 'd' : 'a',
 			c->h.v, (&TextWindow::ScreenSelectConstraint),

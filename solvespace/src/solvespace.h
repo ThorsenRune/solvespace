@@ -17,7 +17,8 @@
 #include <stdarg.h>
 #include <math.h>
 #include <limits.h>
-#ifdef HAVE_STDINT_H
+
+#ifdef HAVE_STDINT_H        //If you do not have it then it doesnt compile ;)
 #   include <stdint.h>
 #endif
 #ifdef WIN32
@@ -49,7 +50,7 @@
 //*************************************Revision key constants
 #define REV1RT	(1<<1)
 		// Free revision mask constants
-#define REV2	(1<<2)
+#define REVeMVe	(1<<2)
 #define REV3	(1<<3)
 #define REV4	(1<<4)
 #define REV5	(1<<5)
@@ -61,6 +62,8 @@
 #define EDIT_DEFAULT2CONSTRUCTION	(1<<4)
 #define SHOW_COMMENTS_FOR_ALL_GROUPS (1<<5)
 #define EDIT_ENABLENAMING            (1<<6)
+#define EDIT_SHOW_ALL_GROUPS         (1<<7)
+#define EXPORT_CONSTRUCTIONLINES     (1<<8)
 //*************************************
 
 #ifndef min
@@ -339,6 +342,8 @@ bool MakeAcceleratorLabel(int accel, char *out);
 bool StringAllPrintable(const char *str);
 bool StringEndsIn(const char *str, const char *ending);
 void Message(const char *str, ...);
+
+int SSmsgbox(int timeOutSec,const char * sprintf_params,...) ;            //RT1219 A NON MODAL MESSAGEBOX  with timeout
 void Error(const char *str, ...);
 void CnfFreezeBool(bool v, const char *name);
 void CnfFreezeColor(RgbColor v, const char *name);
@@ -745,8 +750,8 @@ public:
     bool     exportPwlCurves;
     bool     exportCanvasSizeAuto;
 	bool	 copyConstraints;
-	int		 revisionUnlockKey;				//RT Binary match for unlocking specific revisions RT1=&1
-	int		 solveOptions  ;	//RT: Options flags
+	int		 revisionEnabler;				//RT Binary match for unlocking specific revisions RT1=&1
+	int		 solveOptions  ;				//RT: Options flags
 									// SOLVER_FINDBAD	: Dont attempt to propose fixes jacobian singularity
 									// OPTION2 : draw new requests as construction lines
 	int		RTDebugCntr ;		//counter available for debugging purposes

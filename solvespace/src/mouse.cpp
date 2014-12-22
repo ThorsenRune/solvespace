@@ -723,7 +723,7 @@ hRequest GraphicsWindow::AddRequest(int type, bool rememberForUndo) {
     r.group = activeGroup;
     Group *g = SK.GetGroup(activeGroup);
     if(g->type == Group::DRAWING_3D || g->type == Group::DRAWING_WORKPLANE) {
-		if (SS.revisionUnlockKey && REV1RT){
+		if (SS.revisionEnabler && REV1RT){
 			r.construction = (SS.solveOptions & EDIT_DEFAULT2CONSTRUCTION);	//RT drawing construction as default
 		}
 		else

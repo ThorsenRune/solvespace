@@ -7,9 +7,14 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 #include <time.h>
+#include <windows.h>
 #include <shellapi.h>
 #include <commctrl.h>
 #include <commdlg.h>
+
+#include <tchar.h>          //RT1219 from http://www.codeproject.com/Articles/7914/MessageBoxTimeout-AP
+#include <windef.h>         //Defines W ORD
+#include <winuser.h>
 
 #ifdef HAVE_SPACEWARE_INPUT
 #   include <si.h>
@@ -53,9 +58,128 @@ HFONT FixedFont;
 SiHdl SpaceNavigator = SI_NO_HANDLE;
 #endif
 
+//RT1219 from http://www.codeproject.com/Articles/7914/MessageBoxTimeout-API
+// But, it generates a bling noise
+//Functions & other definitions required-->
+typedef int (__stdcall *MSGBOXAAPI)(IN HWND hWnd,
+        IN LPCSTR lpText, IN LPCSTR lpCaption,
+        IN UINT uType, IN WORD wLanguageId, IN DWORD dwMilliseconds);
+typedef int (__stdcall *MSGBOXWAPI)(IN HWND hWnd,
+        IN LPCWSTR lpText, IN LPCWSTR lpCaption,
+        IN UINT uType, IN WORD wLanguageId, IN DWORD dwMilliseconds);
+
+int MessageBoxTimeoutA(IN HWND hWnd, IN LPCSTR lpText,
+    IN LPCSTR lpCaption, IN UINT uType,
+    IN WORD wLanguageId, IN DWORD dwMilliseconds);
+int MessageBoxTimeoutW(IN HWND hWnd, IN LPCWSTR lpText,
+    IN LPCWSTR lpCaption, IN UINT uType,
+    IN WORD wLanguageId, IN DWORD dwMilliseconds);
+
+#ifdef UNICODE
+    #define MessageBoxTimeout MessageBoxTimeoutW
+#else
+    #define MessageBoxTimeout MessageBoxTimeoutA
+#endif
+
+#define MB_TIMEDOUT 32000
+
+int MessageBoxTimeoutA(HWND hWnd, LPCSTR lpText,
+    LPCSTR lpCaption, UINT uType, WORD wLanguageId,
+    DWORD dwMilliseconds)
+{
+    static MSGBOXAAPI MsgBoxTOA = NULL;
+
+    if (!MsgBoxTOA)
+    {
+        HMODULE hUser32 = GetModuleHandle(_T("user32.dll"));
+        if (hUser32)
+        {
+            MsgBoxTOA = (MSGBOXAAPI)GetProcAddress(hUser32,
+                                      "MessageBoxTimeoutA");
+            //fall through to 'if (MsgBoxTOA)...'
+        }
+        else
+        {
+            //stuff happened, add code to handle it here
+            //(possibly just call MessageBox())
+            return 0;
+        }
+    }
+
+    if (MsgBoxTOA)
+    {
+        return MsgBoxTOA(hWnd, lpText, lpCaption,
+              uType, wLanguageId, dwMilliseconds);
+    }
+
+    return 0;
+}
+
+int MessageBoxTimeoutW(HWND hWnd, LPCWSTR lpText,
+    LPCWSTR lpCaption, UINT uType, WORD wLanguageId, DWORD dwMilliseconds)
+{
+    static MSGBOXWAPI MsgBoxTOW = NULL;
+
+    if (!MsgBoxTOW)
+    {
+        HMODULE hUser32 = GetModuleHandle(_T("user32.dll"));
+        if (hUser32)
+        {
+            MsgBoxTOW = (MSGBOXWAPI)GetProcAddress(hUser32,
+                                      "MessageBoxTimeoutW");
+            //fall through to 'if (MsgBoxTOW)...'
+        }
+        else
+        {
+            //stuff happened, add code to handle it here
+            //(possibly just call MessageBox())
+            return 0;
+        }
+    }
+
+    if (MsgBoxTOW)
+    {
+        return MsgBoxTOW(hWnd, lpText, lpCaption,
+               uType, wLanguageId, dwMilliseconds);
+    }
+
+    return 0;
+}
+//End required definitions <--
+//Test http://www.codeproject.com/Articles/7914/MessageBoxTimeout-API
+//http://en.wikibooks.org/wiki/Windows_Programming/Dialog_Boxes
+//you must load user32.dll before calling the function
+int SSmsgbox(int timeOutSec,const char * sprintf_params,...){  //message ,timeout, sprintf formatted list of parameters for the message
+
+HMODULE hUser32 = LoadLibrary(_T("user32.dll"));
+if (hUser32)
+{
+    static char msg[1024];
+    va_list args;
+    va_start(args, sprintf_params);
+    _vsnprintf(msg, sizeof(msg), sprintf_params, args);
+    va_end(args);
+
+    int iRet = 0;
+    //UINT uiFlags = MB_OK|MB_SETFOREGROUND|MB_SYSTEMMODAL|MB_ICONINFORMATION;        //Modal (Halts processing)
+    //MB_YESNO,http://msdn.microsoft.com/en-us/library/windows/desktop/ms645505%28v=vs.85%29.aspx
+    UINT uiFlags = MB_OK|MB_SETFOREGROUND;
+    iRet = MessageBoxTimeout(NULL, _T(msg),
+                      _T("SolveSpace information"), uiFlags, 0,timeOutSec*1000);
+    //iRet will = 1
+    //iRet will = MB_TIMEDOUT if no buttons pressed, button values otherwise
+
+    //only unload user32.dll when you have no further need
+    //for the MessageBoxTimeout function
+    FreeLibrary(hUser32);
+    return iRet;
+}
+//
+}
+
 //-----------------------------------------------------------------------------
 // Routines to display message boxes on screen. Do our own, instead of using
-// MessageBox, because that is not consistent from version to version and 
+// MessageBox, because that is not consistent from version to version and
 // there's word wrap problems.
 //-----------------------------------------------------------------------------
 
@@ -91,7 +215,7 @@ static LRESULT CALLBACK MessageProc(HWND hwnd, UINT msg, WPARAM wParam,
                     row++;
                 } else {
                     TextOut(hdc, col*SS.TW.CHAR_WIDTH + 10,
-                                 row*SS.TW.LINE_HEIGHT + 10, 
+                                 row*SS.TW.LINE_HEIGHT + 10,
                                  &(MessageString[i]), 1);
                     col++;
                 }
@@ -118,7 +242,7 @@ HWND CreateWindowClient(DWORD exStyle, const char *className, const char *window
     GetClientRect(h, &r);
     width = width - (r.right - width);
     height = height - (r.bottom - height);
-    
+
     SetWindowPos(h, HWND_TOP, x, y, width, height, 0);
 
     return h;
@@ -161,7 +285,7 @@ void DoMessageBox(const char *str, int rows, int cols, bool error)
     OkButton = CreateWindowEx(0, WC_BUTTON, "OK",
         WS_CHILD | WS_TABSTOP | WS_CLIPSIBLINGS | WS_VISIBLE | BS_DEFPUSHBUTTON,
         (width - 70)/2, rows*SS.TW.LINE_HEIGHT + 20,
-        70, 25, MessageWnd, NULL, Instance, NULL); 
+        70, 25, MessageWnd, NULL, Instance, NULL);
     SendMessage(OkButton, WM_SETFONT, (WPARAM)FixedFont, true);
 
     ShowWindow(MessageWnd, true);
@@ -184,7 +308,7 @@ void DoMessageBox(const char *str, int rows, int cols, bool error)
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
+
     MessageString = NULL;
     EnableWindow(TextWnd, true);
     EnableWindow(GraphicsWnd, true);
@@ -197,7 +321,7 @@ void AddContextMenuItem(const char *label, int id)
     if(!ContextMenu) ContextMenu = CreatePopupMenu();
 
     if(id == CONTEXT_SUBMENU) {
-        AppendMenu(ContextMenu, MF_STRING | MF_POPUP, 
+        AppendMenu(ContextMenu, MF_STRING | MF_POPUP,
             (UINT_PTR)ContextSubmenu, label);
         ContextSubmenu = NULL;
     } else {
@@ -219,7 +343,7 @@ int ShowContextMenu(void)
 {
     POINT p;
     GetCursorPos(&p);
-    int r = TrackPopupMenu(ContextMenu, 
+    int r = TrackPopupMenu(ContextMenu,
         TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_TOPALIGN,
         p.x, p.y, 0, GraphicsWnd, NULL);
 
@@ -352,7 +476,7 @@ void HandleTextWindowScrollBar(WPARAM wParam, LPARAM lParam)
         case SB_THUMBTRACK:
         case SB_THUMBPOSITION:  pos = HIWORD(wParam); break;
     }
-    
+
     SS.TW.ScrollbarEvent(pos);
 }
 
@@ -375,7 +499,7 @@ static void MouseWheel(int thisDelta) {
     POINT pt;
     GetCursorPos(&pt);
     HWND hw = WindowFromPoint(pt);
-    
+
     // Make the mousewheel work according to which window the mouse is
     // over, not according to which window is active.
     bool inTextWindow;
@@ -419,7 +543,7 @@ LRESULT CALLBACK TextWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             EndPaint(hwnd, &ps);
             break;
         }
-        
+
         case WM_SIZING: {
             RECT *r = (RECT *)lParam;
             int hc = (r->bottom - r->top) - ClientIsSmallerBy;
@@ -477,7 +601,7 @@ LRESULT CALLBACK TextWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SS.TW.MouseEvent(msg == WM_LBUTTONDOWN, wParam & MK_LBUTTON, x, y);
             break;
         }
-        
+
         case WM_SIZE: {
             RECT r;
             GetWindowRect(TextWndScrollBar, &r);
@@ -618,23 +742,23 @@ static void CreateGlContext(HWND hwnd, HGLRC *glrc)
     int pixelFormat;
 
     memset(&pfd, 0, sizeof(pfd));
-    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR); 
-    pfd.nVersion = 1; 
-    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |  
-                        PFD_DOUBLEBUFFER; 
-    pfd.dwLayerMask = PFD_MAIN_PLANE; 
-    pfd.iPixelType = PFD_TYPE_RGBA; 
-    pfd.cColorBits = 32; 
-    pfd.cDepthBits = 24; 
-    pfd.cAccumBits = 0; 
-    pfd.cStencilBits = 0; 
- 
-    pixelFormat = ChoosePixelFormat(hdc, &pfd); 
+    pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |
+                        PFD_DOUBLEBUFFER;
+    pfd.dwLayerMask = PFD_MAIN_PLANE;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+    pfd.cDepthBits = 24;
+    pfd.cAccumBits = 0;
+    pfd.cStencilBits = 0;
+
+    pixelFormat = ChoosePixelFormat(hdc, &pfd);
     if(!pixelFormat) oops();
- 
+
     if(!SetPixelFormat(hdc, pixelFormat, &pfd)) oops();
 
-    *glrc = wglCreateContext(hdc); 
+    *glrc = wglCreateContext(hdc);
     wglMakeCurrent(hdc, *glrc);
 }
 
@@ -669,9 +793,11 @@ int64_t GetMilliseconds(void)
 
 int64_t GetUnixTime(void)
 {
-    __time64_t ret;
+#ifndef MINGW
+    __time64_t ret;   //Dosnt compile on MinGW
     _time64(&ret);
     return (int64_t)ret;
+#endif // MINGW
 }
 
 void InvalidateText(void)
@@ -897,7 +1023,7 @@ int SaveFileYesNoCancel(void)
     EnableWindow(GraphicsWnd, false);
     EnableWindow(TextWnd, false);
 
-    int r = MessageBox(GraphicsWnd, 
+    int r = MessageBox(GraphicsWnd,
         "The program has changed since it was last saved.\r\n\r\n"
         "Do you want to save the changes?", "SolveSpace",
         MB_YESNOCANCEL | MB_ICONWARNING);
@@ -948,9 +1074,9 @@ static void MenuById(int id, bool yes, bool check)
 
     for(i = 0; SS.GW.menu[i].level >= 0; i++) {
         if(SS.GW.menu[i].level == 0) subMenu++;
-        
+
         if(SS.GW.menu[i].id == id) {
-            if(subMenu < 0) oops();
+			if (subMenu < 0)  DEBUGPLEASE("Negative subMenu not allowed");
             if(subMenu >= (int)arraylen(SubMenus)) oops();
 
             if(check) {
@@ -963,7 +1089,7 @@ static void MenuById(int id, bool yes, bool check)
             return;
         }
     }
-    oops();
+    DEBUGPLEASE("Could not find a menu entry");
 }
 void CheckMenuById(int id, bool checked)
 {
@@ -1005,7 +1131,7 @@ HMENU CreateGraphicsWindowMenus(void)
 
     int i;
     int subMenu = 0;
-    
+
     for(i = 0; SS.GW.menu[i].level >= 0; i++) {
         char label[100] = { '\0' };
         if(SS.GW.menu[i].label) {
@@ -1036,7 +1162,8 @@ HMENU CreateGraphicsWindowMenus(void)
             } else {
                 AppendMenu(m, MF_SEPARATOR, SS.GW.menu[i].id, "");
             }
-        } else oops();
+        } else
+			oops();
     }
     RefreshRecentMenus();
 
@@ -1054,7 +1181,7 @@ static void CreateMainWindows(void)
     wc.style            = CS_BYTEALIGNCLIENT | CS_BYTEALIGNWINDOW | CS_OWNDC |
                           CS_DBLCLKS;
     wc.lpfnWndProc      = (WNDPROC)GraphicsWndProc;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1); 
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
     wc.lpszClassName    = "GraphicsWnd";
     wc.lpszMenuName     = NULL;
     wc.hCursor          = LoadCursor(NULL, IDC_ARROW);
@@ -1088,13 +1215,13 @@ static void CreateMainWindows(void)
 
     // We get the desired Alt+Tab behaviour by specifying that the text
     // window is a child of the graphics window.
-    TextWnd = CreateWindowEx(0, 
+    TextWnd = CreateWindowEx(0,
         "TextWnd", "SolveSpace - Browser", WS_THICKFRAME | WS_CLIPCHILDREN,
         650, 500, 420, 300, GraphicsWnd, (HMENU)NULL, Instance, NULL);
     if(!TextWnd) oops();
 
     TextWndScrollBar = CreateWindowEx(0, WC_SCROLLBAR, "", WS_CHILD |
-        SBS_VERT | SBS_LEFTALIGN | WS_VISIBLE | WS_CLIPSIBLINGS, 
+        SBS_VERT | SBS_LEFTALIGN | WS_VISIBLE | WS_CLIPSIBLINGS,
         200, 100, 100, 100, TextWnd, NULL, Instance, NULL);
     // Force the scrollbar to get resized to the window,
     TextWndProc(TextWnd, WM_SIZE, 0, 0);
@@ -1179,12 +1306,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     ShowWindow(TextWnd, SW_SHOWNOACTIVATE);
     ShowWindow(GraphicsWnd, SW_SHOW);
-   
+
     glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT); 
+    glClear(GL_COLOR_BUFFER_BIT);
     SwapBuffers(GetDC(GraphicsWnd));
     glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT); 
+    glClear(GL_COLOR_BUFFER_BIT);
     SwapBuffers(GetDC(GraphicsWnd));
 
     // Create the heaps for all dynamic memory (AllocTemporary, MemAlloc)
@@ -1217,7 +1344,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         SiSetUiMode(SpaceNavigator, SI_UI_NO_CONTROLS);
     }
 #endif
-    
+
     // Call in to the platform-independent code, and let them do their init
     SS.Init(file);
 
